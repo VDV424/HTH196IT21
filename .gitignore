@@ -71,3 +71,8 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Scratch & temporary files
+scratch/
+audit_results.json
+*.log

@@ -12,11 +12,16 @@ import {
   Droplet, 
   Heart, 
   Activity,
-  UserCheck
+  UserCheck,
+  Pill,
+  FlaskConical,
+  Calendar,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Patient, DoctorEscalationRecord, HandoverRecord } from '../types';
 import { api } from '../services/api';
 import { sounds } from '../utils/audio';
+import { DoctorEMRPanel } from '../components/DoctorEMRPanel';
 
 interface DoctorDashboardPageProps {
   patients: Patient[];
@@ -24,7 +29,9 @@ interface DoctorDashboardPageProps {
 }
 
 export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patients, onSelectPatient }) => {
-  const [activeDoctorTab, setActiveDoctorTab] = useState<'deterioration' | 'escalations' | 'sbar' | 'iv_oversight'>('deterioration');
+  const [activeDoctorTab, setActiveDoctorTab] = useState<
+    'deterioration' | 'escalations' | 'encounters' | 'prescriptions' | 'labs' | 'appointments' | 'sbar' | 'iv_oversight'
+  >('deterioration');
   const [selectedDoctor, setSelectedDoctor] = useState<string>('Dr. Michael Vance (Attending Physician)');
   const [escalations, setEscalations] = useState<DoctorEscalationRecord[]>([]);
   const [handovers, setHandovers] = useState<Record<string, HandoverRecord>>({});
@@ -103,7 +110,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-slate-900 tracking-tight">Physician Clinical Portal</h1>
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-violet-50 text-indigo-300 border border-violet-200">
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-violet-100 text-violet-800 border border-violet-200">
                   Doctor Rounding Mode
                 </span>
               </div>
@@ -131,11 +138,11 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
               onClick={() => setActiveDoctorTab('escalations')}
               className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 pendingEscalations.length > 0
-                  ? 'bg-rose-950 text-rose-300 border border-rose-800 animate-pulse'
-                  : 'bg-slate-100 text-slate-600 border border-slate-300'
+                  ? 'bg-rose-100 text-rose-800 border border-rose-300 animate-pulse'
+                  : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
               <span>{pendingEscalations.length} Escalations</span>
             </button>
           </div>
@@ -146,7 +153,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
           <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
             <span className="text-[11px] font-medium text-slate-500">Critical Trajectory Patients</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-xl font-bold font-mono ${criticalPatients.length > 0 ? 'text-rose-400' : 'text-slate-700'}`}>
+              <span className={`text-xl font-bold font-mono ${criticalPatients.length > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
                 {criticalPatients.length}
               </span>
               <span className="text-[10px] text-slate-500">Tier 1 Deterioration</span>
@@ -156,7 +163,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
           <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
             <span className="text-[11px] font-medium text-slate-500">High Risk & Watch</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-bold font-mono text-amber-400">{highRiskPatients.length}</span>
+              <span className="text-xl font-bold font-mono text-amber-600">{highRiskPatients.length}</span>
               <span className="text-[10px] text-slate-500">Early Warning Alerts</span>
             </div>
           </div>
@@ -164,7 +171,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
           <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
             <span className="text-[11px] font-medium text-slate-500">Pending Physician Calls</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-xl font-bold font-mono ${pendingEscalations.length > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              <span className={`text-xl font-bold font-mono ${pendingEscalations.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                 {pendingEscalations.length}
               </span>
               <span className="text-[10px] text-slate-500">Awaiting Orders</span>
@@ -182,63 +189,101 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
       </div>
 
       {/* Doctor Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveDoctorTab('deterioration')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeDoctorTab === 'deterioration'
-              ? 'bg-violet-600 text-slate-900 shadow-lg shadow-violet-600/30'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/60'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-3.5 h-3.5" />
           <span>Deterioration Forensics ({patients.length})</span>
         </button>
 
         <button
           onClick={() => setActiveDoctorTab('escalations')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeDoctorTab === 'escalations'
-              ? 'bg-violet-600 text-slate-900 shadow-lg shadow-violet-600/30'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/60'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <ShieldAlert className="w-4 h-4" />
-          <span>Doctor Escalations Queue</span>
-          {pendingEscalations.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-slate-900">
-              {pendingEscalations.length}
-            </span>
-          )}
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Escalations & Orders ({pendingEscalations.length})</span>
         </button>
 
         <button
-          onClick={() => {
-            setActiveDoctorTab('sbar');
-            if (patients.length > 0 && !selectedSbarPatientId) {
-              handleLoadSbar(patients[0].patient_id);
-            }
-          }}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-            activeDoctorTab === 'sbar'
-              ? 'bg-violet-600 text-slate-900 shadow-lg shadow-violet-600/30'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/60'
+          onClick={() => setActiveDoctorTab('encounters')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeDoctorTab === 'encounters'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <FileText className="w-4 h-4" />
-          <span>SBAR Clinical Reviews</span>
+          <FileSpreadsheet className="w-3.5 h-3.5" />
+          <span>SOAP Encounters (OpenEMR)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDoctorTab('prescriptions')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeDoctorTab === 'prescriptions'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Pill className="w-3.5 h-3.5" />
+          <span>e-Prescriptions (eRx)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDoctorTab('labs')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeDoctorTab === 'labs'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <FlaskConical className="w-3.5 h-3.5" />
+          <span>Labs & Diagnostics (Danphe)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDoctorTab('appointments')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeDoctorTab === 'appointments'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Appointments (MERN)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDoctorTab('sbar')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeDoctorTab === 'sbar'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span>SBAR Handover</span>
         </button>
 
         <button
           onClick={() => setActiveDoctorTab('iv_oversight')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
             activeDoctorTab === 'iv_oversight'
-              ? 'bg-violet-600 text-slate-900 shadow-lg shadow-violet-600/30'
-              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/60'
+              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
           }`}
         >
-          <Droplet className="w-4 h-4" />
-          <span>IV & Infusion Oversight</span>
+          <Droplet className="w-3.5 h-3.5" />
+          <span>Smart IV</span>
         </button>
       </div>
 
@@ -735,6 +780,42 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({ patien
             })}
           </div>
         </div>
+      )}
+
+      {/* TAB: EMR SOAP Encounters */}
+      {activeDoctorTab === 'encounters' && (
+        <DoctorEMRPanel
+          patients={patients}
+          activeSection="encounters"
+          onSelectPatient={onSelectPatient}
+        />
+      )}
+
+      {/* TAB: e-Prescriptions */}
+      {activeDoctorTab === 'prescriptions' && (
+        <DoctorEMRPanel
+          patients={patients}
+          activeSection="prescriptions"
+          onSelectPatient={onSelectPatient}
+        />
+      )}
+
+      {/* TAB: Labs & Diagnostics */}
+      {activeDoctorTab === 'labs' && (
+        <DoctorEMRPanel
+          patients={patients}
+          activeSection="labs"
+          onSelectPatient={onSelectPatient}
+        />
+      )}
+
+      {/* TAB: Consultation Appointments */}
+      {activeDoctorTab === 'appointments' && (
+        <DoctorEMRPanel
+          patients={patients}
+          activeSection="appointments"
+          onSelectPatient={onSelectPatient}
+        />
       )}
     </div>
   );

@@ -8,6 +8,11 @@ from ..models.schemas import (
     TrajectoryDirection,
     SignalQuality,
 )
+from .clinical_scores import (
+    calculate_news2,
+    calculate_sepsis_risk,
+    predict_deterioration_horizon,
+)
 
 def compute_slope(values: List[float]) -> float:
     n = len(values)
@@ -277,6 +282,24 @@ def analyze_patient_trajectory(
         ),
     ]
 
+    # 11. Clinical Standard Scores (NEWS2, Sepsis Risk, 60m Projection)
+    news_res = calculate_news2(
+        heart_rate=current_vitals.heart_rate,
+        spo2=current_vitals.spo2,
+        temperature=current_vitals.temperature,
+    )
+    sepsis_idx = calculate_sepsis_risk(
+        heart_rate=current_vitals.heart_rate,
+        temperature=current_vitals.temperature,
+        spo2=current_vitals.spo2,
+        deterioration_score=deterioration_score,
+    )
+    pred_60m = predict_deterioration_horizon(
+        current_score=deterioration_score,
+        short_term_slope=short_term_slope,
+        long_term_slope=long_term_slope,
+    )
+
     return TrajectoryAnalysis(
         attention_priority=attention_priority,
         deterioration_score=deterioration_score,
@@ -293,4 +316,9 @@ def analyze_patient_trajectory(
         baseline_deviation_hr=round(dev_hr, 1),
         baseline_deviation_spo2=round(dev_spo2, 1),
         baseline_deviation_temp=round(dev_temp, 2),
+        news2_score=news_res["score"],
+        news2_risk=news_res["risk_level"],
+        news2_recommendation=news_res["recommendation"],
+        predicted_deterioration_risk_60m=pred_60m,
+        early_sepsis_index=sepsis_idx,
     )

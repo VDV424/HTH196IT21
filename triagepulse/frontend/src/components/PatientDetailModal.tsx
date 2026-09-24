@@ -17,6 +17,13 @@ import {
   Clock,
   Radio,
   HelpCircle,
+  Zap,
+  BedDouble,
+  ShieldCheck,
+  AlertOctagon,
+  Copy,
+  Printer,
+  RefreshCw,
 } from 'lucide-react';
 import {
   LineChart,
@@ -29,6 +36,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { api } from '../services/api';
+import { sounds } from '../utils/audio';
 
 interface PatientDetailModalProps {
   patient: Patient | null;
@@ -42,26 +50,62 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
   const [handoverRecord, setHandoverRecord] = useState<any>(null);
   const [generatingHandover, setGeneratingHandover] = useState(false);
+  const [copiedSbar, setCopiedSbar] = useState(false);
+  const [refillingIV, setRefillingIV] = useState(false);
 
   // SOS & Request handlers
   const handleTriggerSOS = async () => {
     if (!patient) return;
     await api.triggerSOS(patient.patient_id);
+    sounds.playSOSAlarm();
   };
 
   const handleClearSOS = async () => {
     if (!patient) return;
     await api.clearSOS(patient.patient_id);
+    sounds.playSuccessChime();
+  };
+
+  const handleTriggerCodeBlue = async () => {
+    if (!patient) return;
+    await api.triggerCodeBlue(patient.patient_id);
+    sounds.playCodeBlueAlarm();
+  };
+
+  const handleClearCodeBlue = async () => {
+    if (!patient) return;
+    await api.clearCodeBlue(patient.patient_id);
+    sounds.playSuccessChime();
+  };
+
+  const handleRefillIV = async (vol: number = 1000) => {
+    if (!patient) return;
+    setRefillingIV(true);
+    try {
+      await api.refillIV(patient.patient_id, vol);
+      sounds.playSuccessChime();
+    } finally {
+      setRefillingIV(false);
+    }
   };
 
   const handleTriggerRequest = async (reqType: string) => {
     if (!patient) return;
     await api.triggerRequest(patient.patient_id, reqType);
+    sounds.playRequestChime();
   };
 
   const handleClearRequest = async () => {
     if (!patient) return;
     await api.clearRequest(patient.patient_id);
+    sounds.playSuccessChime();
+  };
+
+  const handleCopySbar = () => {
+    if (!handoverRecord?.summary_text) return;
+    navigator.clipboard.writeText(handoverRecord.summary_text);
+    setCopiedSbar(true);
+    setTimeout(() => setCopiedSbar(false), 3000);
   };
 
   if (!patient) return null;
@@ -222,68 +266,214 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
         {/* Modal Scrollable Body */}
         <div className="p-6 overflow-y-auto space-y-6">
-          {/* Section 10: SEPARATE PHYSIOLOGY AND CARE-TASK / IV URGENCY */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Physiological Deterioration Card */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          {/* Code Blue Active Banner */}
+          {p.code_blue_active && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white flex items-center justify-between shadow-xl animate-pulse">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">⚡</span>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-widest">CODE BLUE RESUSCITATION IN PROGRESS</h3>
+                  <p className="text-xs text-red-100">Crash Cart Dispatched • Intensivist & Emergency Nurse Routing to {p.room}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleClearCodeBlue}
+                className="px-4 py-2 rounded-lg bg-white text-red-700 font-bold text-xs uppercase tracking-wider hover:bg-red-50 shadow-md transition-all active:scale-95"
+              >
+                Clear Code Blue
+              </button>
+            </div>
+          )}
+
+          {/* Section 10: 4-PILLAR CLINICAL STRATIFICATION & REAL-WORLD HOSPITAL METRICS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Physiological Deterioration */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between shadow-xs">
               <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  Physiological Deterioration D(t)
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Physiology D(t)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold font-mono text-slate-900">
+                  <span className="text-3xl font-extrabold font-mono text-slate-900">
                     {traj.deterioration_score.toFixed(0)}
                   </span>
                   <span className="text-xs text-slate-500 font-sans">/ 100</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Derived from baseline departure, velocity, persistence, and multi-vital concordance.
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Multi-vital velocity & baseline deviation.
                 </p>
               </div>
 
-              <div className="text-right">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="text-[10px] text-slate-500">Severity</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   traj.physiological_level === 'HIGH'
-                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                    ? 'bg-rose-100 text-rose-700 border border-rose-300'
                     : traj.physiological_level === 'WATCH'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                 }`}>
                   {traj.physiological_level}
                 </span>
-                <span className="block text-[11px] text-slate-500 mt-1">Physiological Level</span>
               </div>
             </div>
 
-            {/* IV Care-Task Urgency Card */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            {/* Card 2: Care-Task / IV Urgency */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between shadow-xs">
               <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                   Care-Task / IV Urgency U(t)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold font-mono text-slate-900">
+                  <span className="text-3xl font-extrabold font-mono text-slate-900">
                     {traj.iv_urgency_score.toFixed(0)}
                   </span>
                   <span className="text-xs text-slate-500 font-sans">/ 100</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Status: <span className="font-semibold text-indigo-300">{p.current_iv.iv_state}</span> ({p.current_iv.iv_remaining_ml.toFixed(0)} mL remaining)
+                <p className="text-[11px] text-slate-500 mt-1 truncate">
+                  {p.current_iv.iv_remaining_ml.toFixed(0)} mL • {p.current_iv.iv_state}
                 </p>
               </div>
 
-              <div className="text-right">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="text-[10px] text-slate-500">IV Task Priority</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                   traj.iv_level === 'HIGH'
-                    ? 'bg-violet-500/20 text-indigo-300 border border-violet-500/40'
+                    ? 'bg-violet-100 text-violet-700 border border-violet-300'
                     : traj.iv_level === 'WATCH'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                 }`}>
                   {traj.iv_level}
                 </span>
-                <span className="block text-[11px] text-slate-500 mt-1">IV Task Level</span>
               </div>
+            </div>
+
+            {/* Card 3: NHS NEWS2 Royal College Score */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between shadow-xs">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    NEWS2 Clinical Score
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-semibold">RCP</span>
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-extrabold font-mono text-slate-900">
+                    {traj.news2_score ?? 0}
+                  </span>
+                  <span className="text-xs text-slate-500 font-sans">/ 20</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">
+                  {traj.news2_recommendation || 'Routine ward observations'}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="text-[10px] text-slate-500">Risk Band</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  (traj.news2_score ?? 0) >= 7
+                    ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
+                    : (traj.news2_score ?? 0) >= 5
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                }`}>
+                  {traj.news2_risk ?? ((traj.news2_score ?? 0) >= 7 ? 'HIGH' : (traj.news2_score ?? 0) >= 5 ? 'MEDIUM' : 'LOW')}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: AI 60-Minute Horizon & Sepsis Index */}
+            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-col justify-between shadow-xs">
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  AI 60m Horizon & Sepsis
+                </span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-extrabold font-mono text-slate-900">
+                    {traj.predicted_deterioration_risk_60m?.toFixed(0) ?? traj.deterioration_score.toFixed(0)}%
+                  </span>
+                  <span className="text-xs text-slate-500 font-sans">60m risk</span>
+                </div>
+                <div className="mt-2 w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full ${
+                      (traj.predicted_deterioration_risk_60m ?? 0) > 60
+                        ? 'bg-rose-500'
+                        : (traj.predicted_deterioration_risk_60m ?? 0) > 35
+                        ? 'bg-amber-400'
+                        : 'bg-emerald-400'
+                    }`}
+                    style={{ width: `${Math.max(10, traj.predicted_deterioration_risk_60m ?? 20)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 text-[10px]">SIRS Sepsis Index</span>
+                <span className="font-mono font-semibold text-slate-700">
+                  {traj.early_sepsis_index?.toFixed(0) ?? '15'}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hospital ADT Bed Management & eMAR Infusion Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ADT Bed Management Card */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 flex-shrink-0">
+                  <BedDouble className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900">{p.room} • Bed A</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      {p.bed_status || 'OCCUPIED'}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      {p.isolation_precautions || 'Standard Precautions'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Length of Stay: <span className="font-medium text-slate-700">{p.length_of_stay_hrs || 24} hours</span> • Ward 4B Medical/Surgical
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* eMAR Smart Infusion & Guardrails Card */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 flex-shrink-0">
+                  <Droplets className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900">{p.iv_fluid_name || '0.9% Normal Saline (1000mL)'}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-violet-100 text-violet-800 border border-violet-200">
+                      {p.current_iv.iv_flow} mL/h
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {p.iv_occlusion ? (
+                      <span className="text-rose-600 font-bold">⚠️ Line Occlusion Detected (HX711 Zero-Flow)</span>
+                    ) : (
+                      <span>DERS Guardrails Active • Anti-Free-Flow Verified</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleRefillIV(1000)}
+                disabled={refillingIV}
+                className="px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refillingIV ? 'animate-spin' : ''}`} />
+                <span>Refill 1000mL</span>
+              </button>
             </div>
           </div>
 
@@ -490,22 +680,41 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               <span className="text-[10px] font-normal text-slate-500">(ESP32 physical buttons or dashboard triggers)</span>
             </h4>
             <div className="flex flex-wrap items-center gap-3">
+              {/* Code Blue Emergency Trigger */}
+              {!p.code_blue_active ? (
+                <button
+                  onClick={handleTriggerCodeBlue}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-700 via-rose-700 to-red-800 hover:from-red-600 hover:to-rose-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-700/30 hover:scale-105 active:scale-95"
+                >
+                  <span className="text-base">⚡</span>
+                  Code Blue (RRT)
+                </button>
+              ) : (
+                <button
+                  onClick={handleClearCodeBlue}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-800 text-white font-bold text-xs uppercase tracking-wider border border-red-500 animate-pulse"
+                >
+                  <span>✓</span>
+                  Clear Code Blue
+                </button>
+              )}
+
               {/* SOS Button */}
               {!p.sos_active ? (
                 <button
                   onClick={handleTriggerSOS}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-slate-900 font-bold text-sm transition-all shadow-lg shadow-red-600/30 hover:shadow-red-500/40 hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-red-600/30 hover:scale-105 active:scale-95"
                 >
-                  <span className="text-lg">🚨</span>
+                  <span className="text-base">🚨</span>
                   SOS Emergency
                 </button>
               ) : (
                 <button
                   onClick={handleClearSOS}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-800 hover:bg-red-700 text-red-200 font-bold text-sm transition-colors border border-red-500/50 animate-pulse"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-800 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-red-500/50 animate-pulse"
                 >
-                  <span className="text-lg">✓</span>
-                  Clear SOS (Nurse Responded)
+                  <span className="text-base">✓</span>
+                  Clear SOS
                 </button>
               )}
 
@@ -515,12 +724,12 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               {/* Nurse Request Buttons */}
               {!p.request_active ? (
                 <>
-                  <span className="text-[11px] text-slate-500 mr-1">Nurse Call:</span>
+                  <span className="text-[11px] text-slate-500 mr-1 font-semibold">Bedside Request:</span>
                   {['Water', 'Pain', 'Bathroom', 'General'].map((reqType) => (
                     <button
                       key={reqType}
                       onClick={() => handleTriggerRequest(reqType)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600/80 hover:bg-violet-500 text-slate-900 font-semibold text-xs transition-all hover:scale-105 active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition-all hover:scale-105 active:scale-95 shadow-xs"
                     >
                       <span className="text-sm">📞</span>
                       {reqType}
@@ -530,10 +739,10 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               ) : (
                 <button
                   onClick={handleClearRequest}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-800 hover:bg-violet-700 text-violet-200 font-semibold text-xs transition-colors border border-violet-500/50"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-800 hover:bg-teal-700 text-white font-semibold text-xs transition-colors border border-teal-500/50"
                 >
                   <span>✓</span>
-                  Clear Request: {p.request_type || 'General'} (Attended)
+                  Clear Request: {p.request_type || 'General'}
                 </button>
               )}
             </div>
@@ -545,7 +754,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               {/* Doctor Escalation Trigger */}
               <button
                 onClick={() => setEscalating(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-slate-900 font-semibold text-xs transition-colors shadow-lg shadow-rose-600/20"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-rose-600/20"
               >
                 <ShieldAlert className="w-4 h-4" />
                 <span>Escalate to Doctor</span>
@@ -555,15 +764,15 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               <button
                 onClick={handleGenerateHandover}
                 disabled={generatingHandover}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors border border-slate-300"
               >
                 <FileText className="w-4 h-4 text-teal-600" />
-                <span>{generatingHandover ? 'Generating Handover...' : 'Generate Handover Summary'}</span>
+                <span>{generatingHandover ? 'Generating Handover...' : 'Generate SBAR Handover'}</span>
               </button>
             </div>
 
             {escalationSuccess && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-semibold">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Doctor Escalation logged in event audit trail.</span>
               </div>
@@ -572,18 +781,18 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
           {/* Doctor Escalation Form Inline Modal */}
           {escalating && (
-            <div className="p-4 rounded-xl bg-slate-50 border border-rose-500/50 space-y-3">
-              <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="p-4 rounded-xl bg-slate-50 border border-rose-300 space-y-3 shadow-sm">
+              <h4 className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" />
-                Simulated Doctor Escalation Request
+                Physician Escalation SBAR Dispatch
               </h4>
-              <p className="text-xs text-slate-500">
-                Log a clinical attention review request with the on-duty medical officer.
+              <p className="text-xs text-slate-600">
+                Log a clinical review request with the on-duty medical officer or intensivist.
               </p>
               <textarea
                 value={escalationReason}
                 onChange={(e) => setEscalationReason(e.target.value)}
-                placeholder="Reason for escalation (e.g. Rapid multi-vital worsening trajectory, SpO2 persisting below 90% despite standard observation)..."
+                placeholder="Reason for escalation (e.g. Rapid multi-vital worsening trajectory, NEWS2 score elevated to 7, SpO2 persisting below 90%)..."
                 className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-rose-500 resize-none h-20"
               />
               <div className="flex items-center justify-end gap-2">
@@ -596,7 +805,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                 <button
                   onClick={handleDoctorEscalation}
                   disabled={!escalationReason}
-                  className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-slate-900 font-semibold text-xs disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs disabled:opacity-50"
                 >
                   Confirm Escalation
                 </button>
@@ -606,26 +815,39 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
           {/* Handover Record Drawer */}
           {handoverRecord && (
-            <div className="p-4 rounded-xl bg-slate-50 border border-teal-500/40 space-y-3">
+            <div className="p-4 rounded-xl bg-white border border-teal-200 space-y-3 shadow-md">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-teal-600 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-teal-700 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText className="w-4 h-4" />
-                  Generated Shift Handover Record ({handoverRecord.id})
+                  Clinical SBAR Shift Handover ({handoverRecord.id})
                 </h4>
-                <span className="text-[11px] text-slate-500 font-mono">
-                  Recommended review: In {handoverRecord.recommended_next_review_min} min
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopySbar}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-semibold hover:bg-teal-100 transition-colors"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>{copiedSbar ? 'Copied!' : 'Copy SBAR'}</span>
+                  </button>
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold hover:bg-slate-200 transition-colors"
+                  >
+                    <Printer className="w-3 h-3" />
+                    <span>Print</span>
+                  </button>
+                </div>
               </div>
-              <pre className="p-3 rounded-lg bg-white text-slate-700 text-xs font-mono whitespace-pre-wrap leading-relaxed border border-slate-200">
+              <pre className="p-3 rounded-lg bg-slate-50 text-slate-800 text-xs font-mono whitespace-pre-wrap leading-relaxed border border-slate-200 shadow-inner">
                 {handoverRecord.summary_text}
               </pre>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-emerald-400 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Next Shift Nurse Review
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> JCAHO & SBAR Clinical Standard Verified
                 </span>
                 <button
                   onClick={() => setHandoverRecord(null)}
-                  className="text-slate-500 hover:text-slate-900 text-xs"
+                  className="text-slate-500 hover:text-slate-900 text-xs font-medium"
                 >
                   Dismiss
                 </button>

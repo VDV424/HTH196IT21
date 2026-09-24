@@ -43,6 +43,12 @@ export interface TrajectoryAnalysis {
   baseline_deviation_hr: number;
   baseline_deviation_spo2: number;
   baseline_deviation_temp: number;
+  // Clinical Scoring & Sepsis
+  news2_score?: number;
+  news2_risk?: "LOW" | "MEDIUM" | "HIGH";
+  news2_recommendation?: string;
+  predicted_deterioration_risk_60m?: number;
+  early_sepsis_index?: number;
 }
 
 export interface Patient {
@@ -68,6 +74,17 @@ export interface Patient {
   request_active: boolean;
   request_type: string | null;
   request_triggered_at: string | null;
+  // Hospital Management & Bed Board
+  bed_status?: "OCCUPIED" | "AVAILABLE" | "SANITIZING" | "ISOLATION";
+  isolation_precautions?: string;
+  length_of_stay_hrs?: number;
+  // Medication Administration & Smart Infusion Guardrails
+  iv_fluid_name?: string;
+  iv_occlusion?: boolean;
+  iv_free_flow?: boolean;
+  // Code Blue / Rapid Response
+  code_blue_active?: boolean;
+  code_blue_triggered_at?: string | null;
 }
 
 export interface Nurse {
@@ -205,3 +222,160 @@ export interface HandoverRecord {
   created_at: string;
   recommended_next_review_min: number;
 }
+
+// =========================================================================
+// HOSPITAL MANAGEMENT SYSTEM (HMS) & EMR EXTENSIONS
+// =========================================================================
+
+export interface ClinicalEncounter {
+  id: string;
+  encounter_id?: string;
+  patient_id: string;
+  doctor_id: string;
+  doctor_name: string;
+  encounter_type: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  icd10_code: string;
+  created_at: string;
+}
+
+export interface Prescription {
+  id: string;
+  prescription_id?: string;
+  patient_id: string;
+  patient_name?: string;
+  room?: string;
+  doctor_id: string;
+  doctor_name: string;
+  prescribed_by?: string;
+  medication: string;
+  medication_name?: string;
+  dosage: string;
+  frequency: string;
+  route: string;
+  duration: string;
+  status: 'Active' | 'Administered' | 'Discontinued' | string;
+  prescribed_at?: string;
+  administered_at?: string | null;
+  last_administered?: string | null;
+}
+
+export interface LabOrder {
+  id: string;
+  order_id?: string;
+  patient_id: string;
+  doctor_name: string;
+  test_name: string;
+  category: string;
+  priority: 'ROUTINE' | 'URGENT' | 'STAT' | string;
+  status: 'ORDERED' | 'SAMPLE_COLLECTED' | 'RESULT_AVAILABLE' | string;
+  ordered_at?: string;
+  created_at?: string;
+  result_value?: string | null;
+  reference_range?: string | null;
+  flag?: 'NORMAL' | 'HIGH' | 'LOW' | 'CRITICAL' | null;
+  completed_at?: string | null;
+}
+
+export interface WardBed {
+  bed_id: string;
+  room: string;
+  ward: string;
+  bed_type: string;
+  status: 'OCCUPIED' | 'AVAILABLE' | 'CLEANING' | 'ISOLATION' | 'MAINTENANCE' | string;
+  patient_id?: string | null;
+  patient_name?: string | null;
+  isolation: string;
+  isolation_type?: string;
+  los_hours?: number;
+  acuity_level?: string;
+  updated_at: string;
+}
+
+export interface PharmacyItem {
+  item_id: string;
+  item_name: string;
+  category: string;
+  stock_quantity: number;
+  current_stock?: number;
+  unit: string;
+  reorder_level: number;
+  min_reorder_level?: number;
+  status: 'NORMAL' | 'LOW_STOCK' | 'CRITICAL' | string;
+  location?: string;
+  unit_price?: number;
+  batch_number?: string;
+  expiry_date?: string;
+  updated_at: string;
+}
+
+export interface FluidBalance {
+  id: string;
+  record_id?: string;
+  patient_id: string;
+  timestamp: string;
+  intake_iv_ml: number;
+  intake_oral_ml: number;
+  intake_ml?: number;
+  intake_type?: string;
+  output_urine_ml: number;
+  output_drain_ml: number;
+  output_ml?: number;
+  output_type?: string;
+  net_balance_ml: number;
+  balance_ml?: number;
+  recorded_by: string;
+  notes?: string;
+}
+
+export interface NursingCareTask {
+  id: string;
+  task_id?: string;
+  patient_id: string;
+  patient_name?: string;
+  room?: string;
+  nurse_id: string;
+  assigned_nurse?: string;
+  task_description: string;
+  task_title?: string;
+  category: string;
+  priority?: 'ROUTINE' | 'URGENT' | 'STAT' | string;
+  due_time: string;
+  is_completed: boolean;
+  status?: string;
+  completed_at?: string | null;
+  notes?: string | null;
+}
+
+export interface Appointment {
+  id: string;
+  appointment_id?: string;
+  patient_id: string;
+  patient_name: string;
+  doctor_name: string;
+  department: string;
+  appointment_date?: string;
+  appointment_time?: string;
+  scheduled_date?: string;
+  scheduled_time?: string;
+  status: 'SCHEDULED' | 'CHECKED_IN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
+  reason: string;
+  created_at: string;
+}
+
+export interface ClinicalMessage {
+  id: string;
+  message_id?: string;
+  patient_id: string;
+  sender_role: 'patient' | 'nurse' | 'doctor' | 'PATIENT' | 'NURSE' | 'DOCTOR' | string;
+  sender_name: string;
+  recipient_role?: string;
+  message: string;
+  timestamp?: string;
+  created_at?: string;
+  is_read: boolean;
+}
+

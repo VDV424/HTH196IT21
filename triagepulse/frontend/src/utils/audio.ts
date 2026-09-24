@@ -101,6 +101,57 @@ class SoundManager {
       // Audio context restricted
     }
   }
+
+  // Critical Code Blue Alarm (IEC 60601-1-8 high priority pattern: 5-pulse rapid harmonic burst)
+  playCodeBlueAlarm() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const pitches = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5, E5, G5, C6, E6
+      pitches.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + (idx * 0.12));
+
+        gain.gain.setValueAtTime(0.22, now + (idx * 0.12));
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.12) + 0.1);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + (idx * 0.12));
+        osc.stop(now + (idx * 0.12) + 0.11);
+      });
+    } catch {
+      // Audio policy
+    }
+  }
+
+  // Medication / Infusion Occlusion warning beep
+  playMedicationAlert() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      [0, 0.15].forEach((d) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(987.77, now + d); // B5
+        gain.gain.setValueAtTime(0.15, now + d);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + d);
+        osc.stop(now + d + 0.09);
+      });
+    } catch {
+      // Audio policy
+    }
+  }
 }
 
 export const sounds = new SoundManager();

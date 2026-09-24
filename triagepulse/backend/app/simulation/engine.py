@@ -246,7 +246,7 @@ class SimulationEngine:
         p.request_triggered_at = None
         return True
 
-    def refill_iv(self, patient_id: str, volume_ml: float = 500.0) -> bool:
+    def refill_iv(self, patient_id: str, volume_ml: float = 500.0, fluid_name: Optional[str] = None) -> bool:
         """Nurse replaces or refills the IV bag."""
         if patient_id not in self.patients:
             return False
@@ -255,9 +255,61 @@ class SimulationEngine:
         p.current_iv.iv_weight = volume_ml
         p.current_iv.iv_flow = 20.0
         p.current_iv.iv_state = "NORMAL"
+        p.iv_occlusion = False
+        p.iv_free_flow = False
+        if fluid_name:
+            p.iv_fluid_name = fluid_name
         p.current_iv.estimated_time_to_empty_min = round((volume_ml / 20.0) * 60.0, 1)
         if p.scenario in ["IV_NEAR_EMPTY", "IV_NO_FLOW"]:
             p.scenario = "STABLE"
+        return True
+
+    def trigger_code_blue(self, patient_id: str) -> bool:
+        """Emergency Code Blue: Cardiac/Respiratory arrest - immediate RRT dispatch."""
+        if patient_id not in self.patients:
+            return False
+        p = self.patients[patient_id]
+        p.code_blue_active = True
+        p.code_blue_triggered_at = datetime.now(timezone.utc).isoformat()
+        p.trajectory.attention_priority = 100.0
+        p.trajectory.deterioration_score = 100.0
+        p.trajectory.physiological_level = "HIGH"
+        self._update_patient_trajectory_and_alerts(p)
+        self._reallocate()
+        return True
+
+    def clear_code_blue(self, patient_id: str) -> bool:
+        """Code Blue resolved by resuscitation team."""
+        if patient_id not in self.patients:
+            return False
+        p = self.patients[patient_id]
+        p.code_blue_active = False
+        p.code_blue_triggered_at = None
+        self._update_patient_trajectory_and_alerts(p)
+        self._reallocate()
+        return True
+
+    def update_bed_management(self, patient_id: str, bed_status: str, isolation: str) -> bool:
+        """Update ADT bed occupancy status & infection control precautions."""
+        if patient_id not in self.patients:
+            return False
+        p = self.patients[patient_id]
+        p.bed_status = bed_status
+        p.isolation_precautions = isolation
+        return True
+
+    def set_iv_prescription(self, patient_id: str, fluid_name: str, flow_rate: float) -> bool:
+        """eMAR: Set electronic medication/infusion order with guardrails."""
+        if patient_id not in self.patients:
+            return False
+        p = self.patients[patient_id]
+        p.iv_fluid_name = fluid_name
+        p.current_iv.iv_flow = flow_rate
+        # Anti-free-flow & occlusion guardrails
+        p.iv_free_flow = flow_rate > 250.0
+        p.iv_occlusion = flow_rate <= 0.0 and p.current_iv.iv_remaining_ml > 50.0
+        if p.current_iv.iv_remaining_ml and flow_rate > 0:
+            p.current_iv.estimated_time_to_empty_min = round((p.current_iv.iv_remaining_ml / flow_rate) * 60.0, 1)
         return True
 
     def set_patient_scenario(self, patient_id: str, scenario: str):

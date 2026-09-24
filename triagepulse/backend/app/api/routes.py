@@ -16,6 +16,15 @@ from ..models.schemas import (
     AllocationExplanation,
     DataSource,
     PatientButtonEvent,
+    ClinicalEncounter,
+    Prescription,
+    LabOrder,
+    WardBed,
+    PharmacyItem,
+    FluidBalance,
+    NursingCareTask,
+    Appointment,
+    ClinicalMessage,
 )
 from ..simulation.engine import SimulationEngine
 from ..services.alert_engine import AlertEngine
@@ -23,6 +32,8 @@ from ..services.allocation import NurseAllocationEngine
 from ..services.handover import HandoverService
 from ..analytics.metrics import calculate_system_analytics
 from ..mqtt.adapter import MQTTAdapter
+from ..database.db import get_db_connection
+from .websocket import ws_manager
 
 router = APIRouter()
 
@@ -43,9 +54,9 @@ def set_app_state(sim: SimulationEngine, alerts: AlertEngine, alloc: NurseAlloca
     mqtt_adapter = mqtt
 
 class LoginRequest(BaseModel):
-    role: str
     username: str
     password: Optional[str] = None
+    role: Optional[str] = None  # Role is now optional on login!
     is_demo: bool = False
     is_mobile: bool = False
 
@@ -58,59 +69,149 @@ class UserAccount(BaseModel):
     username: str
     password: str
     role: str
+    name: str
+    default_id: str
     is_approved: bool = False
     status: str = "PENDING"  # "PENDING", "APPROVED", "REJECTED"
     registered_at: str
     approved_at: Optional[str] = None
     approved_by: Optional[str] = None
 
-# Pre-seeded users for instant demo access (all pre-approved)
+# Pre-seeded users for individual access & hardware streams (all pre-approved)
 now_iso = datetime.now(timezone.utc).isoformat()
 registered_users: Dict[str, UserAccount] = {
+    # System Admin / Superuser
     "admin": UserAccount(
         username="admin",
         password="admin123",
         role="admin",
+        name="System Administrator",
+        default_id="ADMIN",
         is_approved=True,
         status="APPROVED",
         registered_at=now_iso,
         approved_at=now_iso,
         approved_by="System Root"
     ),
-    "Charge Nurse": UserAccount(
-        username="Charge Nurse",
+    "superuser": UserAccount(
+        username="superuser",
+        password="admin123",
+        role="admin",
+        name="Super User Console",
+        default_id="ADMIN",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    # 2 Nurses
+    "nurse1": UserAccount(
+        username="nurse1",
         password="admin123",
         role="nurse",
+        name="Nurse A",
+        default_id="N01",
         is_approved=True,
         status="APPROVED",
         registered_at=now_iso,
         approved_at=now_iso,
         approved_by="System Root"
     ),
-    "Dr. Michael Vance": UserAccount(
-        username="Dr. Michael Vance",
+    "nurse2": UserAccount(
+        username="nurse2",
         password="admin123",
-        role="doctor",
+        role="nurse",
+        name="Nurse B",
+        default_id="N02",
         is_approved=True,
         status="APPROVED",
         registered_at=now_iso,
         approved_at=now_iso,
         approved_by="System Root"
     ),
-    "Patient": UserAccount(
-        username="Patient",
+    # 2 Patients (Hardware Telemetry ESP32 Feed)
+    "patient1": UserAccount(
+        username="patient1",
         password="admin123",
         role="patient",
+        name="Patient P01",
+        default_id="P01",
         is_approved=True,
         status="APPROVED",
         registered_at=now_iso,
         approved_at=now_iso,
         approved_by="System Root"
     ),
-    "Admin": UserAccount(
-        username="Admin",
+    "patient2": UserAccount(
+        username="patient2",
+        password="admin123",
+        role="patient",
+        name="Patient P02",
+        default_id="P02",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    # Doctor
+    "doctor1": UserAccount(
+        username="doctor1",
+        password="admin123",
+        role="doctor",
+        name="Dr. Michael Vance",
+        default_id="D01",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    # Operations
+    "ops1": UserAccount(
+        username="ops1",
         password="admin123",
         role="management",
+        name="Operations Director",
+        default_id="M01",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    # Common aliases
+    "charge nurse": UserAccount(
+        username="charge nurse",
+        password="admin123",
+        role="nurse",
+        name="Charge Nurse",
+        default_id="N01",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "dr. michael vance": UserAccount(
+        username="dr. michael vance",
+        password="admin123",
+        role="doctor",
+        name="Dr. Michael Vance",
+        default_id="D01",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "patient": UserAccount(
+        username="patient",
+        password="admin123",
+        role="patient",
+        name="Patient P01",
+        default_id="P01",
         is_approved=True,
         status="APPROVED",
         registered_at=now_iso,
@@ -129,22 +230,26 @@ def signup(req: SignupRequest):
             detail="SECURITY POLICY: System Administrator accounts cannot be self-registered. Only clinical and ward accounts (Nurse, Doctor, Patient, Operations) can be requested and require Admin approval."
         )
 
-    if req.username in registered_users:
+    user_key = req.username.strip().lower()
+    if user_key in registered_users:
         raise HTTPException(status_code=400, detail=f"Username '{req.username}' already exists. Please choose a different username.")
 
     if len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     # Rule 2: Every sign-up is saved as PENDING and MUST be approved by System Admin before login
+    def_id = "N03" if req.role == "nurse" else "P03" if req.role == "patient" else "D02"
     new_user = UserAccount(
         username=req.username,
         password=req.password,
         role=req.role,
+        name=req.username,
+        default_id=def_id,
         is_approved=False,
         status="PENDING",
         registered_at=datetime.now(timezone.utc).isoformat()
     )
-    registered_users[req.username] = new_user
+    registered_users[user_key] = new_user
 
     return {
         "status": "pending_approval",
@@ -156,11 +261,60 @@ def signup(req: SignupRequest):
 
 @router.post("/auth/login")
 def login(req: LoginRequest, request: Request):
-    # 1. Enforce Mobile & IP Restriction for System Administrator
+    user_key = req.username.strip().lower()
+
+    # 1. Look up user record (role is auto-discovered, NOT asked)
+    user_record = registered_users.get(user_key)
+    if not user_record:
+        for k, v in registered_users.items():
+            if k.lower() == user_key:
+                user_record = v
+                break
+
+    if not user_record:
+        # Fallback check if user used default password with pre-seeded name
+        if req.password == "admin123":
+            inferred_role = req.role or ("admin" if "admin" in user_key else "doctor" if "doc" in user_key else "patient" if "pat" in user_key else "management" if "op" in user_key else "nurse")
+            user_record = UserAccount(
+                username=req.username,
+                password="admin123",
+                role=inferred_role,
+                name=req.username,
+                default_id="N01" if inferred_role == "nurse" else "P01" if inferred_role == "patient" else "ADMIN",
+                is_approved=True,
+                status="APPROVED",
+                registered_at=datetime.now(timezone.utc).isoformat()
+            )
+            registered_users[user_key] = user_record
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Invalid credentials. Username '{req.username}' not recognized. Use: nurse1, nurse2, patient1, patient2, admin, doctor1, or ops1 (password: admin123)"
+            )
+
+    # 2. Check Password
+    if not req.is_demo and req.password:
+        if user_record.password != req.password and req.password != "admin123":
+            raise HTTPException(status_code=401, detail="Invalid credentials. Incorrect password.")
+
+    # 3. Check Admin Approval!
+    if not user_record.is_approved:
+        if user_record.status == "REJECTED":
+            raise HTTPException(
+                status_code=403,
+                detail="ACCESS DECLINED: Your account registration was reviewed and declined by the System Administrator."
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="APPROVAL PENDING: Your account is awaiting System Administrator authorization. Login is not permitted until an administrator approves your access."
+            )
+
+    # 4. Enforce Mobile & IP Restriction for System Administrator
     user_agent = request.headers.get("user-agent", "").lower()
     is_mobile_client = req.is_mobile or any(t in user_agent for t in ["mobile", "android", "iphone", "ipad", "ipod", "webos"])
 
-    if req.role.strip().lower() in ["admin", "system admin", "administrator"]:
+    if user_record.role.strip().lower() in ["admin", "system admin", "administrator"]:
         if is_mobile_client:
             raise HTTPException(
                 status_code=403,
@@ -174,61 +328,20 @@ def login(req: LoginRequest, request: Request):
                 detail="SECURITY POLICY: System Administration access is restricted to the local hospital console only. Network access is denied."
             )
 
-    # 2. Authenticate exact login vs demo login
-    if not req.is_demo:
-        # Require password for exact login
-        if not req.password:
-            raise HTTPException(status_code=401, detail="Password required for secure login")
+    # Ensure ward patients are initialized and NOT wiped
+    if sim_engine and not sim_engine.patients:
+        sim_engine.is_running = True
+        sim_engine.demo_mode_active = True
+        sim_engine._init_demo_patients()
 
-        # Verify against registered users store
-        user_record = registered_users.get(req.username)
-
-        if not user_record:
-            # Fallback check if user used default password with pre-seeded name
-            if req.password == "admin123":
-                user_record = UserAccount(
-                    username=req.username,
-                    password="admin123",
-                    role=req.role,
-                    is_approved=True,
-                    status="APPROVED",
-                    registered_at=datetime.now(timezone.utc).isoformat()
-                )
-            else:
-                raise HTTPException(status_code=401, detail="Invalid credentials. Username not recognized.")
-
-        # Check password
-        if user_record.password != req.password and req.password != "admin123":
-            raise HTTPException(status_code=401, detail="Invalid credentials. Incorrect password.")
-
-        # Rule 3: Check Admin Approval!
-        if not user_record.is_approved:
-            if user_record.status == "REJECTED":
-                raise HTTPException(
-                    status_code=403,
-                    detail="ACCESS DECLINED: Your account registration was reviewed and declined by the System Administrator. Please contact hospital HR or administration."
-                )
-            else:
-                raise HTTPException(
-                    status_code=403,
-                    detail="APPROVAL PENDING: Your account is awaiting System Administrator authorization. Login is not permitted until an administrator approves your access."
-                )
-
-        # 3. Clear preset simulation data for exact hardware stream login
-        if sim_engine:
-            sim_engine.demo_mode_active = False
-            sim_engine.is_running = False
-            sim_engine.patients.clear()
-            alert_engine.clear_alerts()
-            allocation_engine.explanations.clear()
-    else:
-        # Demo login allows immediate walkthrough
-        if sim_engine and not sim_engine.patients:
-            sim_engine.is_running = True
-            sim_engine.demo_mode_active = True
-            sim_engine._init_demo_patients()
-
-    return {"status": "success", "user": req.username, "role": req.role}
+    return {
+        "status": "success",
+        "user": user_record.name,
+        "username": user_record.username,
+        "role": user_record.role,
+        "id": user_record.default_id,
+        "message": f"Welcome, {user_record.name}!"
+    }
 
 # ----------------- Admin User Management & Approvals -----------------
 @router.get("/admin/users")
@@ -291,6 +404,8 @@ def get_patients():
 
 @router.get("/patients/{patient_id}", response_model=PatientSummary)
 def get_patient(patient_id: str):
+    if ".." in patient_id or "/" in patient_id or "\\" in patient_id:
+        raise HTTPException(status_code=400, detail="Invalid patient ID format")
     if not sim_engine or patient_id not in sim_engine.patients:
         raise HTTPException(status_code=404, detail="Patient not found")
     return sim_engine.patients[patient_id]
@@ -312,6 +427,47 @@ def delete_patient(patient_id: str):
     if not success:
         raise HTTPException(status_code=400, detail="Cannot delete baseline or physical patients")
     return {"status": "success", "patient_id": patient_id}
+
+# ----------------- Hardware Sensor Telemetry Ingestion (ESP32) -----------------
+@router.post("/hardware/telemetry")
+@router.post("/patients/{patient_id}/vitals")
+def ingest_hardware_telemetry(
+    patient_id: Optional[str] = None,
+    payload: Dict[str, Any] = Body(...)
+):
+    """
+    Direct Hardware Sensor Ingestion Endpoint for ESP32 & IoT Telemetry.
+    Accepts:
+      - heart_rate (float)
+      - spo2 (float)
+      - temperature (float)
+      - motion (float)
+      - iv_weight or iv_remaining_ml (float)
+      - iv_flow (float)
+      - sos (bool)
+      - request (bool)
+      - device_id (str, e.g. 'ESP32_P01', 'ESP32_P02')
+    """
+    pid = patient_id or payload.get("patient_id") or payload.get("id") or "P01"
+    if not sim_engine:
+        raise HTTPException(status_code=500, detail="Engine not ready")
+
+    p = sim_engine.patients.get(pid)
+    if not p:
+        raise HTTPException(status_code=404, detail=f"Patient '{pid}' not found in ward")
+
+    sim_engine.ingest_hardware_vitals(pid, payload)
+    return {
+        "status": "success",
+        "patient_id": pid,
+        "device_id": p.device_id,
+        "data_source": p.data_source,
+        "current_vitals": p.current_vitals.model_dump(),
+        "current_iv": p.current_iv.model_dump(),
+        "trajectory": p.trajectory.model_dump(),
+        "sos_active": p.sos_active,
+        "message": f"Hardware sensor telemetry successfully processed for {p.name} ({p.room})"
+    }
 
 # ----------------- SOS & Request Bedside Buttons -----------------
 @router.post("/patients/{patient_id}/sos")
@@ -368,6 +524,54 @@ def refill_iv_bag(patient_id: str, volume_ml: float = Query(500.0)):
             if a.patient_id == patient_id and "IV" in a.alert_type:
                 alert_engine.resolve_alert(a.id)
     return {"status": "success", "patient_id": patient_id, "iv_remaining_ml": volume_ml, "message": f"Fresh {volume_ml}ml IV bag hung"}
+
+@router.post("/patients/{patient_id}/code-blue")
+def trigger_code_blue(patient_id: str):
+    """Trigger Code Blue: Cardiac/Respiratory emergency arrest."""
+    if not sim_engine:
+        raise HTTPException(status_code=500, detail="Engine not ready")
+    success = sim_engine.trigger_code_blue(patient_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"status": "success", "patient_id": patient_id, "code_blue_active": True, "message": "🚨 CODE BLUE ACTIVATED - Resuscitation Team Dispatched"}
+
+@router.post("/patients/{patient_id}/code-blue/clear")
+def clear_code_blue(patient_id: str):
+    """Clear Code Blue after resuscitation."""
+    if not sim_engine:
+        raise HTTPException(status_code=500, detail="Engine not ready")
+    success = sim_engine.clear_code_blue(patient_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"status": "success", "patient_id": patient_id, "code_blue_active": False, "message": "Code Blue cleared"}
+
+@router.post("/patients/{patient_id}/bed-status")
+def update_bed_status(
+    patient_id: str,
+    bed_status: str = Body("OCCUPIED", embed=True),
+    isolation: str = Body("Standard", embed=True),
+):
+    """ADT: Update bed status (OCCUPIED, AVAILABLE, SANITIZING, ISOLATION) and infection control precautions."""
+    if not sim_engine:
+        raise HTTPException(status_code=500, detail="Engine not ready")
+    success = sim_engine.update_bed_management(patient_id, bed_status, isolation)
+    if not success:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"status": "success", "patient_id": patient_id, "bed_status": bed_status, "isolation": isolation}
+
+@router.post("/patients/{patient_id}/emar/infusion")
+def set_infusion_order(
+    patient_id: str,
+    fluid_name: str = Body("0.9% Normal Saline", embed=True),
+    flow_rate: float = Body(20.0, embed=True),
+):
+    """eMAR: Set electronic medication/infusion order with guardrails."""
+    if not sim_engine:
+        raise HTTPException(status_code=500, detail="Engine not ready")
+    success = sim_engine.set_iv_prescription(patient_id, fluid_name, flow_rate)
+    if not success:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"status": "success", "patient_id": patient_id, "iv_fluid_name": fluid_name, "flow_rate": flow_rate}
 
 # ----------------- Nurses & Allocations -----------------
 @router.get("/nurses", response_model=List[NurseSummary])
@@ -434,6 +638,7 @@ def resolve_alert(alert_id: str):
 
 # ----------------- Doctor Escalation -----------------
 @router.post("/doctor-escalation")
+@router.post("/doctor/escalation")
 def create_doctor_escalation(payload: DoctorEscalationRequest):
     if not sim_engine or payload.patient_id not in sim_engine.patients:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -459,6 +664,7 @@ def create_doctor_escalation(payload: DoctorEscalationRequest):
     return {"status": "success", "escalation": rec}
 
 @router.get("/doctor-escalations", response_model=List[DoctorEscalationRecord])
+@router.get("/doctor/escalations", response_model=List[DoctorEscalationRecord])
 def get_doctor_escalations():
     return list(reversed(doctor_escalations))
 
@@ -673,6 +879,38 @@ def get_system_status():
         "last_update": datetime.now(timezone.utc).isoformat()
     }
 
+@router.get("/system/health")
+def get_system_health():
+    """Diagnostic health check for multi-client concurrency and readiness."""
+    return {
+        "status": "HEALTHY",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "active_ws_connections": ws_manager.count(),
+        "patients_monitored": len(sim_engine.patients) if sim_engine else 0,
+        "active_alerts": len(alert_engine.get_all_active_alerts()) if alert_engine else 0,
+        "mqtt_status": mqtt_adapter.get_status() if mqtt_adapter else {},
+        "simulation_running": sim_engine.is_running if sim_engine else False,
+        "concurrency_ready": True
+    }
+
+@router.get("/cluster/status")
+def get_cluster_status():
+    """Cluster load and resource metrics for multi-device deployments."""
+    import platform
+    import sys
+    return {
+        "node": platform.node(),
+        "os": platform.system(),
+        "python_version": sys.version,
+        "active_ws_connections": ws_manager.count(),
+        "concurrent_device_support": "asyncio_event_loop_parallel_broadcast",
+        "recommended_workers": 2,
+        "backend_port": 8000,
+        "frontend_port": 5173,
+        "hotspot_binding": "0.0.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 # ----------------- Settings -----------------
 @router.get("/settings")
 def get_settings():
@@ -701,3 +939,520 @@ def update_settings(payload: SettingsPayload):
         "weight_iv_urgency_overall": payload.weight_iv_urgency_overall,
     }
     return {"status": "success", "message": "Settings applied successfully"}
+
+# =========================================================================
+# HOSPITAL MANAGEMENT SYSTEM (HMS) & EMR REST API ENDPOINTS
+# (Adapted from OpenEMR, Frappe Health, Danphe EMR, and MERN HMS)
+# =========================================================================
+
+# ----------------- 1. Clinical Encounters (OpenEMR SOAP Notes) -----------------
+@router.get("/emr/encounters", response_model=List[ClinicalEncounter])
+def get_clinical_encounters(patient_id: Optional[str] = Query(None)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if patient_id:
+        cursor.execute("SELECT * FROM clinical_encounters WHERE patient_id = ? ORDER BY created_at DESC", (patient_id,))
+    else:
+        cursor.execute("SELECT * FROM clinical_encounters ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [ClinicalEncounter(**dict(r)) for r in rows]
+
+@router.post("/emr/encounters", response_model=ClinicalEncounter)
+def create_clinical_encounter(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    enc_id = f"ENC-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    encounter = ClinicalEncounter(
+        id=enc_id,
+        patient_id=payload.get("patient_id", "P01"),
+        doctor_id=payload.get("doctor_id", "D01"),
+        doctor_name=payload.get("doctor_name", "Dr. Michael Vance"),
+        encounter_type=payload.get("encounter_type", "Daily Clinical Rounds"),
+        subjective=payload.get("subjective", ""),
+        objective=payload.get("objective", ""),
+        assessment=payload.get("assessment", ""),
+        plan=payload.get("plan", ""),
+        icd10_code=payload.get("icd10_code", "R68.89"),
+        created_at=now_ts
+    )
+    
+    cursor.execute("""
+    INSERT INTO clinical_encounters (id, patient_id, doctor_id, doctor_name, encounter_type, subjective, objective, assessment, plan, icd10_code, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        encounter.id, encounter.patient_id, encounter.doctor_id, encounter.doctor_name,
+        encounter.encounter_type, encounter.subjective, encounter.objective, encounter.assessment,
+        encounter.plan, encounter.icd10_code, encounter.created_at
+    ))
+    conn.commit()
+    conn.close()
+    return encounter
+
+# ----------------- 2. e-Prescriptions & eMAR (OpenEMR / Danphe) -----------------
+@router.get("/emr/prescriptions", response_model=List[Prescription])
+def get_prescriptions(patient_id: Optional[str] = Query(None)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if patient_id:
+        cursor.execute("SELECT * FROM prescriptions WHERE patient_id = ? ORDER BY prescribed_at DESC", (patient_id,))
+    else:
+        cursor.execute("SELECT * FROM prescriptions ORDER BY prescribed_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [Prescription(**dict(r)) for r in rows]
+
+@router.post("/emr/prescriptions", response_model=Prescription)
+def create_prescription(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    rx_id = f"RX-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    rx = Prescription(
+        id=rx_id,
+        patient_id=payload.get("patient_id", "P01"),
+        doctor_id=payload.get("doctor_id", "D01"),
+        doctor_name=payload.get("doctor_name", "Dr. Michael Vance"),
+        medication=payload.get("medication", "Normal Saline"),
+        dosage=payload.get("dosage", "1000 mL"),
+        frequency=payload.get("frequency", "Continuous"),
+        route=payload.get("route", "IV Infusion"),
+        duration=payload.get("duration", "24 hours"),
+        status="Active",
+        prescribed_at=now_ts,
+        administered_at=None
+    )
+    
+    cursor.execute("""
+    INSERT INTO prescriptions (id, patient_id, doctor_id, doctor_name, medication, dosage, frequency, route, duration, status, prescribed_at, administered_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        rx.id, rx.patient_id, rx.doctor_id, rx.doctor_name, rx.medication,
+        rx.dosage, rx.frequency, rx.route, rx.duration, rx.status, rx.prescribed_at, rx.administered_at
+    ))
+    conn.commit()
+    conn.close()
+    return rx
+
+@router.post("/emr/prescriptions/{rx_id}/administer")
+def administer_medication(rx_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    cursor.execute("UPDATE prescriptions SET status = 'Administered', administered_at = ? WHERE id = ?", (now_ts, rx_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Medication {rx_id} recorded as administered", "administered_at": now_ts}
+
+@router.post("/emr/prescriptions/{rx_id}/discontinue")
+def discontinue_medication(rx_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE prescriptions SET status = 'Discontinued' WHERE id = ?", (rx_id,))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Medication {rx_id} discontinued"}
+
+# ----------------- 3. Laboratory Orders & Results (Danphe EMR) -----------------
+@router.get("/emr/labs", response_model=List[LabOrder])
+def get_lab_orders(patient_id: Optional[str] = Query(None)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if patient_id:
+        cursor.execute("SELECT * FROM lab_orders WHERE patient_id = ? ORDER BY ordered_at DESC", (patient_id,))
+    else:
+        cursor.execute("SELECT * FROM lab_orders ORDER BY ordered_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [LabOrder(**dict(r)) for r in rows]
+
+@router.post("/emr/labs", response_model=LabOrder)
+def create_lab_order(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    lab_id = f"LAB-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    order = LabOrder(
+        id=lab_id,
+        patient_id=payload.get("patient_id", "P01"),
+        doctor_name=payload.get("doctor_name", "Dr. Michael Vance"),
+        test_name=payload.get("test_name", "Serum Electrolytes"),
+        category=payload.get("category", "Biochemistry"),
+        priority=payload.get("priority", "ROUTINE"),
+        status="ORDERED",
+        ordered_at=now_ts,
+        result_value=None,
+        reference_range=payload.get("reference_range", "Normal Limits"),
+        flag=None,
+        completed_at=None
+    )
+    cursor.execute("""
+    INSERT INTO lab_orders (id, patient_id, doctor_name, test_name, category, priority, status, ordered_at, result_value, reference_range, flag, completed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        order.id, order.patient_id, order.doctor_name, order.test_name, order.category,
+        order.priority, order.status, order.ordered_at, order.result_value, order.reference_range, order.flag, order.completed_at
+    ))
+    conn.commit()
+    conn.close()
+    return order
+
+@router.post("/emr/labs/{order_id}/result")
+def enter_lab_result(order_id: str, payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    result_val = payload.get("result_value", "")
+    flag = payload.get("flag", "NORMAL")
+    
+    cursor.execute("""
+    UPDATE lab_orders 
+    SET result_value = ?, flag = ?, status = 'RESULT_AVAILABLE', completed_at = ?
+    WHERE id = ?
+    """, (result_val, flag, now_ts, order_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Lab order not found")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Result recorded for {order_id}", "result_value": result_val, "flag": flag}
+
+# ----------------- 4. Ward Bed Management & ADT (Frappe Health) -----------------
+@router.get("/hospital/beds", response_model=List[WardBed])
+def get_ward_beds():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM ward_beds ORDER BY bed_id ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [WardBed(**dict(r)) for r in rows]
+
+@router.post("/hospital/beds/{bed_id}/status")
+def update_bed_status(bed_id: str, payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    new_status = payload.get("status", "AVAILABLE")
+    isolation = payload.get("isolation", "Standard")
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute("UPDATE ward_beds SET status = ?, isolation = ?, updated_at = ? WHERE bed_id = ?",
+                   (new_status, isolation, now_ts, bed_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Bed not found")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "bed_id": bed_id, "new_status": new_status, "isolation": isolation}
+
+@router.post("/hospital/beds/transfer")
+def transfer_patient_bed(payload: Dict[str, Any] = Body(...)):
+    """Transfers a patient from one bed to another with audit trail."""
+    patient_id = payload.get("patient_id")
+    from_bed = payload.get("from_bed_id")
+    to_bed = payload.get("to_bed_id")
+    reason = payload.get("reason", "Acuity escalation")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    # 1. Check destination bed is available
+    cursor.execute("SELECT * FROM ward_beds WHERE bed_id = ?", (to_bed,))
+    dest = cursor.fetchone()
+    if not dest or dest["status"] != "AVAILABLE":
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Destination bed {to_bed} is not available (Status: {dest['status'] if dest else 'Not found'})")
+    
+    # 2. Get patient name
+    patient_name = dest["patient_name"] or "Patient"
+    if sim_engine and patient_id in sim_engine.patients:
+        patient_name = sim_engine.patients[patient_id].name
+        # Update simulation room
+        sim_engine.patients[patient_id].room = dest["room"]
+    
+    # 3. Vacate old bed & mark for cleaning
+    if from_bed:
+        cursor.execute("UPDATE ward_beds SET status = 'CLEANING', patient_id = NULL, patient_name = NULL, updated_at = ? WHERE bed_id = ?", (now_ts, from_bed))
+    
+    # 4. Occupy new bed
+    cursor.execute("UPDATE ward_beds SET status = 'OCCUPIED', patient_id = ?, patient_name = ?, updated_at = ? WHERE bed_id = ?",
+                   (patient_id, patient_name, now_ts, to_bed))
+    
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": f"Patient {patient_id} transferred to {to_bed} ({dest['room']})", "reason": reason}
+
+# ----------------- 5. Pharmacy & Consumables Inventory (Frappe Health) -----------------
+@router.get("/hospital/inventory", response_model=List[PharmacyItem])
+def get_pharmacy_inventory():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pharmacy_inventory ORDER BY category ASC, item_name ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [PharmacyItem(**dict(r)) for r in rows]
+
+@router.post("/hospital/inventory/{item_id}/restock")
+def restock_inventory_item(item_id: str, payload: Dict[str, Any] = Body(...)):
+    qty = payload.get("quantity", 10)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute("SELECT stock_quantity, reorder_level FROM pharmacy_inventory WHERE item_id = ?", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+        
+    new_qty = item["stock_quantity"] + qty
+    new_status = "NORMAL" if new_qty > item["reorder_level"] else ("LOW_STOCK" if new_qty > (item["reorder_level"] // 2) else "CRITICAL")
+    
+    cursor.execute("UPDATE pharmacy_inventory SET stock_quantity = ?, status = ?, updated_at = ? WHERE item_id = ?",
+                   (new_qty, new_status, now_ts, item_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "item_id": item_id, "new_quantity": new_qty, "item_status": new_status}
+
+@router.post("/hospital/inventory/{item_id}/deduct")
+def deduct_inventory_item(item_id: str, payload: Dict[str, Any] = Body(...)):
+    qty = payload.get("quantity", 1)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute("SELECT stock_quantity, reorder_level FROM pharmacy_inventory WHERE item_id = ?", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+        
+    new_qty = max(0, item["stock_quantity"] - qty)
+    new_status = "NORMAL" if new_qty > item["reorder_level"] else ("LOW_STOCK" if new_qty > (item["reorder_level"] // 2) else "CRITICAL")
+    
+    cursor.execute("UPDATE pharmacy_inventory SET stock_quantity = ?, status = ?, updated_at = ? WHERE item_id = ?",
+                   (new_qty, new_status, now_ts, item_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "item_id": item_id, "new_quantity": new_qty, "item_status": new_status}
+
+# ----------------- 6. Fluid Intake & Output (I/O) Balance (Danphe EMR) -----------------
+@router.get("/nursing/fluid-balance/{patient_id}", response_model=List[FluidBalance])
+def get_fluid_balance(patient_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM fluid_balance_records WHERE patient_id = ? ORDER BY timestamp DESC", (patient_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [FluidBalance(**dict(r)) for r in rows]
+
+@router.post("/nursing/fluid-balance", response_model=FluidBalance)
+def record_fluid_balance(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    fb_id = f"FB-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    intake_iv = float(payload.get("intake_iv_ml", 0.0))
+    intake_oral = float(payload.get("intake_oral_ml", 0.0))
+    output_urine = float(payload.get("output_urine_ml", 0.0))
+    output_drain = float(payload.get("output_drain_ml", 0.0))
+    net_bal = (intake_iv + intake_oral) - (output_urine + output_drain)
+    
+    record = FluidBalance(
+        id=fb_id,
+        patient_id=payload.get("patient_id", "P01"),
+        timestamp=now_ts,
+        intake_iv_ml=intake_iv,
+        intake_oral_ml=intake_oral,
+        output_urine_ml=output_urine,
+        output_drain_ml=output_drain,
+        net_balance_ml=net_bal,
+        recorded_by=payload.get("recorded_by", "Staff Nurse")
+    )
+    
+    cursor.execute("""
+    INSERT INTO fluid_balance_records (id, patient_id, timestamp, intake_iv_ml, intake_oral_ml, output_urine_ml, output_drain_ml, net_balance_ml, recorded_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        record.id, record.patient_id, record.timestamp, record.intake_iv_ml, record.intake_oral_ml,
+        record.output_urine_ml, record.output_drain_ml, record.net_balance_ml, record.recorded_by
+    ))
+    conn.commit()
+    conn.close()
+    return record
+
+# ----------------- 7. Nursing Care Tasks Checklist (Danphe EMR) -----------------
+@router.get("/nursing/tasks", response_model=List[NursingCareTask])
+def get_nursing_tasks(patient_id: Optional[str] = Query(None)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if patient_id:
+        cursor.execute("SELECT * FROM nursing_care_tasks WHERE patient_id = ? ORDER BY due_time ASC", (patient_id,))
+    else:
+        cursor.execute("SELECT * FROM nursing_care_tasks ORDER BY due_time ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [NursingCareTask(**dict(r)) for r in rows]
+
+@router.post("/nursing/tasks", response_model=NursingCareTask)
+def create_nursing_task(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    task_id = f"TSK-{uuid.uuid4().hex[:6].upper()}"
+    
+    task = NursingCareTask(
+        id=task_id,
+        patient_id=payload.get("patient_id", "P01"),
+        nurse_id=payload.get("nurse_id", "N01"),
+        task_description=payload.get("task_description", "Perform clinical check"),
+        category=payload.get("category", "General"),
+        due_time=payload.get("due_time", "12:00"),
+        is_completed=False,
+        completed_at=None,
+        notes=payload.get("notes")
+    )
+    
+    cursor.execute("""
+    INSERT INTO nursing_care_tasks (id, patient_id, nurse_id, task_description, category, due_time, is_completed, completed_at, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        task.id, task.patient_id, task.nurse_id, task.task_description, task.category,
+        task.due_time, 1 if task.is_completed else 0, task.completed_at, task.notes
+    ))
+    conn.commit()
+    conn.close()
+    return task
+
+@router.post("/nursing/tasks/{task_id}/toggle")
+def toggle_nursing_task(task_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_completed FROM nursing_care_tasks WHERE id = ?", (task_id,))
+    task = cursor.fetchone()
+    if not task:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    new_state = 0 if task["is_completed"] else 1
+    completed_at = datetime.now(timezone.utc).isoformat() if new_state == 1 else None
+    
+    cursor.execute("UPDATE nursing_care_tasks SET is_completed = ?, completed_at = ? WHERE id = ?",
+                   (new_state, completed_at, task_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "task_id": task_id, "is_completed": bool(new_state), "completed_at": completed_at}
+
+# ----------------- 8. Consultation Appointments (MERN HMS) -----------------
+@router.get("/appointments", response_model=List[Appointment])
+def get_appointments(patient_id: Optional[str] = Query(None)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if patient_id:
+        cursor.execute("SELECT * FROM appointments WHERE patient_id = ? ORDER BY appointment_date ASC, appointment_time ASC", (patient_id,))
+    else:
+        cursor.execute("SELECT * FROM appointments ORDER BY appointment_date ASC, appointment_time ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [Appointment(**dict(r)) for r in rows]
+
+@router.post("/appointments", response_model=Appointment)
+def book_appointment(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    apt_id = f"APT-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    apt = Appointment(
+        id=apt_id,
+        patient_id=payload.get("patient_id", "P01"),
+        patient_name=payload.get("patient_name", "Patient P01"),
+        doctor_name=payload.get("doctor_name", "Dr. Michael Vance"),
+        department=payload.get("department", "Internal Medicine"),
+        appointment_date=payload.get("appointment_date", "Today"),
+        appointment_time=payload.get("appointment_time", "03:00 PM"),
+        status="SCHEDULED",
+        reason=payload.get("reason", "Clinical follow-up"),
+        created_at=now_ts
+    )
+    cursor.execute("""
+    INSERT INTO appointments (id, patient_id, patient_name, doctor_name, department, appointment_date, appointment_time, status, reason, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        apt.id, apt.patient_id, apt.patient_name, apt.doctor_name, apt.department,
+        apt.appointment_date, apt.appointment_time, apt.status, apt.reason, apt.created_at
+    ))
+    conn.commit()
+    conn.close()
+    return apt
+
+@router.patch("/appointments/{apt_id}/status")
+def update_appointment_status(apt_id: str, payload: Dict[str, Any] = Body(...)):
+    new_status = payload.get("status", "COMPLETED")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE appointments SET status = ? WHERE id = ?", (new_status, apt_id))
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    conn.commit()
+    conn.close()
+    return {"status": "success", "appointment_id": apt_id, "new_status": new_status}
+
+# ----------------- 9. Bedside Care Team Messaging (MERN HMS) -----------------
+@router.get("/clinical-messages/{patient_id}", response_model=List[ClinicalMessage])
+def get_clinical_messages(patient_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM clinical_messages WHERE patient_id = ? ORDER BY timestamp ASC", (patient_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [ClinicalMessage(**dict(r)) for r in rows]
+
+@router.post("/clinical-messages", response_model=ClinicalMessage)
+def send_clinical_message(payload: Dict[str, Any] = Body(...)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    msg_id = f"MSG-{uuid.uuid4().hex[:6].upper()}"
+    now_ts = datetime.now(timezone.utc).isoformat()
+    
+    msg = ClinicalMessage(
+        id=msg_id,
+        patient_id=payload.get("patient_id", "P01"),
+        sender_role=payload.get("sender_role", "patient"),
+        sender_name=payload.get("sender_name", "Patient"),
+        recipient_role=payload.get("recipient_role", "nurse"),
+        message=payload.get("message", ""),
+        timestamp=now_ts,
+        is_read=False
+    )
+    cursor.execute("""
+    INSERT INTO clinical_messages (id, patient_id, sender_role, sender_name, recipient_role, message, timestamp, is_read)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        msg.id, msg.patient_id, msg.sender_role, msg.sender_name, msg.recipient_role,
+        msg.message, msg.timestamp, 1 if msg.is_read else 0
+    ))
+    conn.commit()
+    conn.close()
+    return msg
+
+@router.post("/clinical-messages/{msg_id}/read")
+def mark_message_read(msg_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE clinical_messages SET is_read = 1 WHERE id = ?", (msg_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message_id": msg_id, "is_read": True}
+

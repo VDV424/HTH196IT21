@@ -68,6 +68,12 @@ class TrajectoryAnalysis(BaseModel):
     baseline_deviation_hr: float = 0.0
     baseline_deviation_spo2: float = 0.0
     baseline_deviation_temp: float = 0.0
+    # Clinical Scoring & Predictive Analytics
+    news2_score: int = 0
+    news2_risk: str = "LOW"
+    news2_recommendation: str = "Standard routine observation"
+    predicted_deterioration_risk_60m: float = 0.0
+    early_sepsis_index: float = 0.0
 
 class PatientSummary(BaseModel):
     patient_id: str
@@ -92,6 +98,17 @@ class PatientSummary(BaseModel):
     request_active: bool = False      # Non-emergency nurse request button
     request_type: Optional[str] = None  # "Water", "Pain", "Bathroom", "General"
     request_triggered_at: Optional[str] = None
+    # Hospital Management & Bed Board
+    bed_status: str = "OCCUPIED"      # "OCCUPIED", "AVAILABLE", "SANITIZING", "ISOLATION"
+    isolation_precautions: str = "Standard" # "Standard", "Contact", "Airborne", "Droplet"
+    length_of_stay_hrs: int = 24
+    # Medication Administration & Smart Infusion Guardrails
+    iv_fluid_name: str = "0.9% Normal Saline (1000mL)"
+    iv_occlusion: bool = False
+    iv_free_flow: bool = False
+    # Code Blue / Rapid Response
+    code_blue_active: bool = False
+    code_blue_triggered_at: Optional[str] = None
 
 class NurseSummary(BaseModel):
     nurse_id: str
@@ -207,3 +224,115 @@ class AllocationExplanation(BaseModel):
     reason: str
     distance_m: Optional[float] = None
     routing_strategy: Optional[str] = None
+
+# =========================================================================
+# HOSPITAL MANAGEMENT SYSTEM (HMS) & EMR EXTENSIONS
+# (Adapted from OpenEMR, Frappe Health, Danphe EMR, and MERN HMS)
+# =========================================================================
+
+class ClinicalEncounter(BaseModel):
+    id: str
+    patient_id: str
+    doctor_id: str
+    doctor_name: str
+    encounter_type: str = "Daily Clinical Rounds"
+    subjective: str
+    objective: str
+    assessment: str
+    plan: str
+    icd10_code: str = "R68.89"
+    created_at: str
+
+class Prescription(BaseModel):
+    id: str
+    patient_id: str
+    doctor_id: str
+    doctor_name: str
+    medication: str
+    dosage: str
+    frequency: str = "TID"
+    route: str = "IV Infusion"
+    duration: str = "3 days"
+    status: str = "Active"  # "Active", "Administered", "Discontinued"
+    prescribed_at: str
+    administered_at: Optional[str] = None
+
+class LabOrder(BaseModel):
+    id: str
+    patient_id: str
+    doctor_name: str
+    test_name: str
+    category: str = "Biochemistry"
+    priority: str = "ROUTINE"  # "ROUTINE", "URGENT", "STAT"
+    status: str = "ORDERED"    # "ORDERED", "SAMPLE_COLLECTED", "RESULT_AVAILABLE"
+    ordered_at: str
+    result_value: Optional[str] = None
+    reference_range: Optional[str] = None
+    flag: Optional[str] = None  # "NORMAL", "HIGH", "LOW", "CRITICAL"
+    completed_at: Optional[str] = None
+
+class WardBed(BaseModel):
+    bed_id: str
+    room: str
+    ward: str
+    bed_type: str = "Stepdown Telemetry"
+    status: str = "OCCUPIED"  # "OCCUPIED", "AVAILABLE", "CLEANING", "ISOLATION"
+    patient_id: Optional[str] = None
+    patient_name: Optional[str] = None
+    isolation: str = "Standard"
+    updated_at: str
+
+class PharmacyItem(BaseModel):
+    item_id: str
+    item_name: str
+    category: str  # "IV Fluids", "Emergency Drugs", "Infusion Supplies"
+    stock_quantity: int
+    unit: str
+    reorder_level: int
+    status: str = "NORMAL"  # "NORMAL", "LOW_STOCK", "CRITICAL"
+    updated_at: str
+
+class FluidBalance(BaseModel):
+    id: str
+    patient_id: str
+    timestamp: str
+    intake_iv_ml: float = 0.0
+    intake_oral_ml: float = 0.0
+    output_urine_ml: float = 0.0
+    output_drain_ml: float = 0.0
+    net_balance_ml: float = 0.0
+    recorded_by: str
+
+class NursingCareTask(BaseModel):
+    id: str
+    patient_id: str
+    nurse_id: str
+    task_description: str
+    category: str = "Medication"
+    due_time: str
+    is_completed: bool = False
+    completed_at: Optional[str] = None
+    notes: Optional[str] = None
+
+class Appointment(BaseModel):
+    id: str
+    patient_id: str
+    patient_name: str
+    doctor_name: str
+    department: str
+    appointment_date: str
+    appointment_time: str
+    status: str = "SCHEDULED"  # "SCHEDULED", "CHECKED_IN", "IN_PROGRESS", "COMPLETED", "CANCELLED"
+    reason: str
+    created_at: str
+
+class ClinicalMessage(BaseModel):
+    id: str
+    patient_id: str
+    sender_role: str  # "patient", "nurse", "doctor"
+    sender_name: str
+    recipient_role: str
+    message: str
+    timestamp: str
+    is_read: bool = False
+

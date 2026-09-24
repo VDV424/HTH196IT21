@@ -15,15 +15,26 @@ class ConnectionManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
+    def count(self) -> int:
+        return len(self.active_connections)
+
     async def broadcast(self, message: dict):
+        if not self.active_connections:
+            return
         message_str = json.dumps(message)
-        dead_connections = []
-        for connection in list(self.active_connections):
+        
+        async def send(conn: WebSocket):
             try:
-                await connection.send_text(message_str)
+                await conn.send_text(message_str)
+                return None
             except Exception:
-                dead_connections.append(connection)
-        for dc in dead_connections:
-            self.disconnect(dc)
+                return conn
+
+        # Parallel broadcast across all connected clients to prevent lag/stalling on slow mobile connections
+        conns = list(self.active_connections)
+        results = await asyncio.gather(*(send(c) for c in conns), return_exceptions=True)
+        for res in results:
+            if isinstance(res, WebSocket):
+                self.disconnect(res)
 
 ws_manager = ConnectionManager()

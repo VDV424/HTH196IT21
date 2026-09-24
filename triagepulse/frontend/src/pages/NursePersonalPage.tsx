@@ -12,10 +12,14 @@ import {
   AlertOctagon,
   Bell,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Pill,
+  FileCheck,
+  Droplet
 } from 'lucide-react';
 import { api } from '../services/api';
 import { sounds } from '../utils/audio';
+import { NurseEMARPanel } from '../components/NurseEMARPanel';
 
 interface NursePersonalPageProps {
   currentNurseName: string;
@@ -32,6 +36,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
   alerts,
   onSelectPatient,
 }) => {
+  const [activeNurseTab, setActiveNurseTab] = useState<'queue' | 'emar' | 'tasks' | 'fluids'>('queue');
   const [refillingPid, setRefillingPid] = useState<string | null>(null);
   const [clearingSosPid, setClearingSosPid] = useState<string | null>(null);
   const [clearingReqPid, setClearingReqPid] = useState<string | null>(null);
@@ -190,21 +195,21 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-emerald-950 border border-emerald-700/60 flex items-center justify-center">
-            <User className="h-6 w-6 text-emerald-400" />
+          <div className="h-12 w-12 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center">
+            <User className="h-6 w-6 text-teal-700" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900">{nurse?.name} — Shift Care Queue</h2>
-              <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 font-mono">
+              <h2 className="text-lg font-bold text-slate-900">{nurse?.name} — Shift Care Portal</h2>
+              <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-mono">
                 {nurse?.ward}
               </span>
             </div>
             <p className="text-xs text-slate-500">
               Role: <span className="text-slate-700">{nurse?.role}</span> • Capacity:{' '}
-              <span className="text-emerald-400 font-bold font-mono">
+              <span className="text-teal-700 font-bold font-mono">
                 {nurse?.assigned_count} / {nurse?.max_capacity} beds ({nurse?.available_capacity} slots remaining)
               </span>
             </p>
@@ -221,12 +226,12 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
 
       {/* Emergency SOS Banner if assigned patient has triggered SOS */}
       {sosPatients.length > 0 && (
-        <div className="bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 shadow-2xl animate-pulse text-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-rose-50 border-2 border-rose-400 rounded-2xl p-4 shadow-lg animate-pulse text-rose-950 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <AlertOctagon className="w-7 h-7 text-slate-900 flex-shrink-0" />
+            <AlertOctagon className="w-7 h-7 text-rose-600 flex-shrink-0" />
             <div>
               <h3 className="text-base font-bold">🚨 ACTIVE EMERGENCY IN YOUR ASSIGNED ROOM</h3>
-              <p className="text-xs text-rose-200">
+              <p className="text-xs text-rose-700">
                 {sosPatients.map((p) => `${p.name} (${p.room})`).join(', ')} has activated the bedside emergency panic button.
               </p>
             </div>
@@ -236,7 +241,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
               <button
                 key={p.patient_id}
                 onClick={() => handleClearSOS(p.patient_id)}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-900 hover:bg-rose-100 transition-all shadow-md"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-md"
               >
                 Clear {p.room} SOS
               </button>
@@ -247,12 +252,12 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
 
       {/* Active Bedside Requests Banner */}
       {requestPatients.length > 0 && (
-        <div className="bg-purple-950/80 border border-purple-500/70 rounded-2xl p-4 shadow-xl text-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-purple-50 border border-purple-300 rounded-2xl p-4 shadow-md text-purple-950 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Bell className="w-5 h-5 text-purple-300 animate-bounce flex-shrink-0" />
+            <Bell className="w-5 h-5 text-purple-600 animate-bounce flex-shrink-0" />
             <div>
-              <h4 className="text-sm font-bold">Bedside Assistance Requests Pending</h4>
-              <p className="text-xs text-purple-200">
+              <h4 className="text-sm font-bold text-purple-950">Bedside Assistance Requests Pending</h4>
+              <p className="text-xs text-purple-700">
                 {requestPatients.map((p) => `${p.room}: ${p.request_type || 'Help'}`).join(' • ')}
               </p>
             </div>
@@ -262,7 +267,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
               <button
                 key={p.patient_id}
                 onClick={() => handleClearRequest(p.patient_id)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-slate-900 transition-all shadow-md"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md"
               >
                 Mark {p.room} Attended
               </button>
@@ -271,8 +276,60 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
         </div>
       )}
 
-      {/* Tiers Grid */}
-      <div className="grid grid-cols-1 gap-5">
+      {/* Nurse Shift Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        <button
+          onClick={() => setActiveNurseTab('queue')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeNurseTab === 'queue'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Assigned Shift Queue ({myPatients.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveNurseTab('emar')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeNurseTab === 'emar'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Pill className="w-3.5 h-3.5" />
+          <span>eMAR Medication Administration</span>
+        </button>
+
+        <button
+          onClick={() => setActiveNurseTab('tasks')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeNurseTab === 'tasks'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <FileCheck className="w-3.5 h-3.5" />
+          <span>Nursing Orders & Tasks (Danphe)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveNurseTab('fluids')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            activeNurseTab === 'fluids'
+              ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
+          }`}
+        >
+          <Droplet className="w-3.5 h-3.5" />
+          <span>Fluid Intake/Output (I/O) Balance</span>
+        </button>
+      </div>
+
+      {/* TAB 1: Queue Tiers */}
+      {activeNurseTab === 'queue' && (
+        <div className="grid grid-cols-1 gap-5">
         {/* Urgent Attention */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
           <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -320,7 +377,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
 
         {/* Stable Patients */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
-          <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-2">
             <CheckCircle className="w-4 h-4" />
             <span>Stable Routine Monitoring ({stablePatients.length})</span>
           </h3>
@@ -332,6 +389,16 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
           </div>
         </div>
       </div>
+      )}
+
+      {/* TAB 2, 3, 4: eMAR, Care Tasks, Fluid Balance */}
+      {activeNurseTab !== 'queue' && (
+        <NurseEMARPanel
+          patients={patients}
+          currentNurseName={currentNurseName}
+          activeSubTab={activeNurseTab}
+        />
+      )}
     </div>
   );
 };

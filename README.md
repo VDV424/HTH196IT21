@@ -45,13 +45,26 @@ Traditional hospital patient telemetry monitors suffer from severe **alarm fatig
 2. **Strict Separation of Physiology and IV Urgency**: Patient vital deterioration $D(t)$ is mathematically separated from IV infusion depletion/occlusion $U(t)$.
 3. **Alert Episode Compression**: Folds dozens of continuous abnormal readings into a single evolving alert episode, achieving **>94% alarm fatigue reduction**.
 4. **Capacity-Aware Dynamic Nurse Allocation**: Automatically triages patients based on clinical priority, specialized nurse capability, ward location, and a hard workload ceiling (default 5 beds/nurse) with explainable reasoning.
-5. **Multi-Role Hospital Ecosystem**:
-   - 🩺 **Nurse Portal**: Real-time ward command grid, dynamic patient priority queue, ward room map, personal shift view with 1-click IV bag replacements and bedside request acknowledgments.
-   - 👨‍⚕️ **Doctor Portal**: Multi-vital deterioration forensics, MEWS2 trend radar, structured SBAR clinical reviews, and active physician escalation queue with 1-click clinical protocol orders.
-   - 🛌 **Patient & Family Bedside Kiosk**: Calming, non-threatening room companion tablet displaying reassuring status, friendly IV progress tracker, 1-tap comfort requests (Water, Pain, Restroom, Nurse Visit), and large Emergency SOS panic button.
-   - 🏢 **Operations & Management**: Ward bed capacity heatmap (20 beds), nurse burnout variance index, alarm fatigue reduction audit (94.3% false alarm suppression), and 3-hour pharmacy IV depletion forecast.
-6. **Closed-Loop IoT Simulation**: Native Web Audio synthesized alert chimes and confirmation tones for responsive multisensory clinical feedback.
-7. **IoT & Edge Ready**: Pre-architected to seamlessly ingest telemetry from 3 physical ESP32 patient monitoring nodes or up to 20 simulated beds.
+5. **NEWS2 Clinical Scoring & Sepsis Detection**: Real-time National Early Warning Score 2 (NEWS2) calculation per Royal College of Physicians standards, plus early sepsis risk indicators and 60-minute deterioration prediction horizon.
+6. **Integrated Hospital Management System (HMS)**:
+   - 📋 **EMR / Clinical Encounters** — OpenEMR-style SOAP note documentation with ICD-10 coding
+   - 💊 **e-Prescriptions & eMAR** — Full medication lifecycle (prescribe → administer → discontinue)
+   - 🔬 **Laboratory Orders & Results** — Danphe EMR-inspired lab workflow with result flagging
+   - 🛏️ **ADT / Ward Bed Matrix** — Frappe Health-style bed occupancy tracking with patient transfers
+   - 📦 **Pharmacy Inventory Management** — Real-time stock levels, reorder alerts, and auto-status
+   - 💧 **Fluid Balance (I/O) Tracking** — Intake/output charting with net balance calculation
+   - ✅ **Nursing Care Task Checklists** — Shift task management with completion tracking
+   - 📅 **Consultation Appointments** — MERN HMS-style scheduling and status management
+   - 💬 **Bedside Clinical Messaging** — Patient-nurse-doctor communication channel
+7. **6 Multi-Role Hospital Portals**:
+   - 🩺 **Nurse Portal**: Real-time ward command grid, dynamic patient priority queue, ward room map, personal shift view with eMAR, nursing tasks, and fluid balance tracking.
+   - 👨‍⚕️ **Doctor Portal**: Multi-vital deterioration forensics, NEWS2 trend radar, structured SBAR clinical reviews, EMR encounters, e-prescriptions, lab orders, and appointment management.
+   - 🛌 **Patient & Family Bedside Kiosk**: Calming companion tablet with wellness indicator, IV progress tracker, comfort requests, care team messaging, medication view, lab results, and Emergency SOS.
+   - 🏢 **Operations & Management**: Ward bed capacity heatmap (20 beds), ADT bed matrix, pharmacy inventory dashboard, nurse burnout variance index, and alarm fatigue audit.
+   - 🛡️ **System Admin Console**: Hospital configuration, staff account management with approval workflow, alert threshold tuning, MQTT hardware settings, and display preferences.
+8. **Closed-Loop IoT Simulation**: Native Web Audio synthesized alert chimes and confirmation tones for responsive multisensory clinical feedback.
+9. **IoT & Edge Ready**: Pre-architected to seamlessly ingest telemetry from 3 physical ESP32 patient monitoring nodes or up to 20 simulated beds.
+10. **Performance Optimized**: React.lazy() code splitting with vendor chunking — 38% bundle size reduction with on-demand portal loading.
 
 ---
 
@@ -143,14 +156,15 @@ Real-time streaming ECG and vital charts with additive point decomposition of cl
 
 ---
 
-## 💻 The 4 Distinct Role-Based Portals
+## 💻 The 6 Distinct Role-Based Portals
 
 | Portal | Intended User | Key Features |
 | :--- | :--- | :--- |
-| **🩺 Nurse Portal** | Bedside & Charge Nurses | Dynamic patient priority queue, ward room map, shift task checklist, 1-click **"Hang 500ml Bag"** IV refill, and bedside request acknowledgments. |
-| **👨‍⚕️ Doctor Portal** | Attending Physicians & Hospitalists | Deterioration forensics, MEWS2 trend radar, structured **SBAR** clinical handovers, and **1-Click Clinical Protocol Orders** (*Start O₂, Push Saline, Stat ABG, ECG, ICU Step-Up*). |
-| **🛌 Patient Bedside Kiosk** | Patient & Family Members | Soothing, non-intimidating tablet kiosk, reassuring wellness indicator, friendly liquid IV progress bar, **1-Tap Comfort Requests** (*Water, Pain Check, Restroom, Nurse Visit*), and tactile **Emergency SOS Panic Button**. |
-| **🏢 Operations & Management** | Ward Supervisors & Hospital Admins | 20-bed occupancy & acuity heatmap, nurse burnout variance index, alarm fatigue reduction audit (**94.3% noise suppression**), and **3-Hour Pharmacy IV Depletion Timeline**. |
+| **🩺 Nurse Portal** | Bedside & Charge Nurses | Dynamic patient priority queue, ward room map, shift task checklist, eMAR medication administration, I/O fluid balance charting, nursing care tasks, 1-click **"Hang 500ml Bag"** IV refill, and bedside request acknowledgments. |
+| **👨‍⚕️ Doctor Portal** | Attending Physicians & Hospitalists | Deterioration forensics, NEWS2 trend radar, structured **SBAR** clinical handovers, **EMR SOAP encounters** with ICD-10, **e-Prescriptions**, **lab orders** with result entry, appointment scheduling, and **1-Click Clinical Protocol Orders**. |
+| **🛌 Patient Bedside Kiosk** | Patient & Family Members | Soothing tablet kiosk, reassuring wellness indicator, friendly liquid IV progress bar, **care team messaging**, medication list, lab results, consultation schedule, **1-Tap Comfort Requests**, and tactile **Emergency SOS Panic Button**. |
+| **🏢 Operations & Management** | Ward Supervisors & Hospital Admins | 20-bed occupancy & acuity heatmap, **ADT bed matrix** with transfer, **pharmacy inventory** with reorder alerts, nurse burnout variance index, and alarm fatigue reduction audit (**94.3% noise suppression**). |
+| **🛡️ System Admin Console** | Hospital IT & Super Admins | Hospital configuration (name, department, ward), **staff account management** with approval/rejection workflow, alert threshold tuning (HR, SpO2, Temp, IV), MQTT hardware settings, display preferences, and system event log. |
 
 ---
 
@@ -246,27 +260,90 @@ HTH196IT21/
     ├── backend/
     │   ├── app/
     │   │   ├── main.py          # FastAPI application, WebSockets & lifespan
-    │   │   ├── api/             # REST endpoints (patients, alerts, escalations, management)
-    │   │   ├── models/          # Pydantic data schemas
+    │   │   ├── api/             # REST endpoints (patients, alerts, HMS, admin)
+    │   │   │   ├── routes.py    # 60+ REST API endpoints (1459 lines)
+    │   │   │   └── websocket.py # Real-time WebSocket broadcast manager
+    │   │   ├── models/          # Pydantic data schemas (339 lines, 20+ models)
     │   │   ├── services/        # Trajectory engine, alert compression, nurse allocation
+    │   │   │   ├── trajectory.py      # Multi-vital trajectory scoring D(t)
+    │   │   │   ├── alert_engine.py    # Alert episode compression engine
+    │   │   │   ├── allocation.py      # Capacity-aware nurse allocation
+    │   │   │   ├── clinical_scores.py # NEWS2, sepsis risk, deterioration prediction
+    │   │   │   └── handover.py        # Shift handover report generation
     │   │   ├── simulation/      # Continuous 12-20 patient generator & scripted demo
     │   │   ├── analytics/       # System metrics & lead-time computations
     │   │   ├── mqtt/            # MQTT adapter for ESP32 hardware
-    │   │   └── database/        # SQLite persistent storage
-    │   ├── tests/               # Pytest suite
+    │   │   └── database/        # SQLite persistent storage (17 tables, seed data)
+    │   ├── tests/               # Pytest suite (8/8 passing)
     │   └── requirements.txt
     ├── frontend/
     │   ├── src/
-    │   │   ├── components/      # Navbar, KPICards, WardRoomMap, DetailModal
-    │   │   ├── pages/           # Nurse, Doctor, Patient Bedside Kiosk, Management
-    │   │   ├── services/        # REST API client
+    │   │   ├── components/      # 15+ React components
+    │   │   │   ├── Navbar.tsx           # Multi-portal navigation bar
+    │   │   │   ├── KPICards.tsx          # Real-time KPI metric cards
+    │   │   │   ├── WardRoomMap.tsx       # Interactive ward bed map
+    │   │   │   ├── PatientDetailModal.tsx# Patient detail with vital charts
+    │   │   │   ├── EMRPanel.tsx          # Clinical encounters & SOAP notes
+    │   │   │   ├── WardBedManagement.tsx # ADT bed matrix & transfer
+    │   │   │   └── PharmacyInventoryPanel.tsx # Inventory management
+    │   │   ├── pages/           # 8 role-specific portal pages
+    │   │   │   ├── LoginPage.tsx         # Multi-role authentication
+    │   │   │   ├── DashboardPage.tsx     # Nurse command dashboard
+    │   │   │   ├── DoctorDashboardPage.tsx    # Doctor clinical portal
+    │   │   │   ├── PatientBedsidePage.tsx     # Patient bedside kiosk
+    │   │   │   ├── ManagementDashboardPage.tsx# Operations dashboard
+    │   │   │   ├── AdminPanelPage.tsx    # System admin console
+    │   │   │   └── NursePersonalPage.tsx # Nurse personal shift view
+    │   │   ├── services/        # REST API client (api.ts)
+    │   │   ├── hooks/           # useWebSocket real-time state hook
     │   │   ├── utils/           # Web Audio synthesized sound manager
-    │   │   └── types/           # TypeScript interfaces
+    │   │   └── types/           # TypeScript interfaces (20+ HMS types)
+    │   ├── index.html           # SEO-optimized HTML template
     │   ├── package.json
-    │   └── vite.config.ts
+    │   └── vite.config.ts       # Code splitting & vendor chunking config
     ├── simulator/               # CLI telemetry injector
     └── docs/                    # Mathematical formulation & hardware wiring diagrams
 ```
+
+---
+
+## 🏥 HMS / EMR REST API Reference
+
+TriagePulse exposes **60+ REST API endpoints** covering both real-time triage and full hospital management:
+
+| Module | Endpoints | Description |
+| :--- | :--- | :--- |
+| **Auth & Users** | `POST /api/login`, `POST /api/register`, `GET /api/admin/users` | Multi-role authentication, registration with admin approval |
+| **Patients** | `GET /api/patients`, `POST /api/patients/{id}/button` | Patient vitals, SOS/request buttons |
+| **Alerts** | `GET /api/alerts`, `POST /api/alerts/{id}/acknowledge` | Alert episodes, acknowledgment, escalation |
+| **Escalations** | `GET /api/escalations`, `POST /api/escalations` | Doctor escalation requests and reviews |
+| **EMR Encounters** | `GET/POST /api/emr/encounters` | SOAP clinical notes with ICD-10 |
+| **e-Prescriptions** | `GET/POST /api/emr/prescriptions`, `POST .../administer`, `POST .../discontinue` | Full eMAR lifecycle |
+| **Lab Orders** | `GET/POST /api/emr/labs`, `POST .../result` | Lab ordering & result entry |
+| **Ward Beds** | `GET /api/hospital/beds`, `POST .../status`, `POST .../transfer` | ADT bed management |
+| **Pharmacy** | `GET /api/hospital/inventory`, `POST .../restock`, `POST .../deduct` | Inventory CRUD |
+| **Fluid Balance** | `GET/POST /api/nursing/fluid-balance` | I/O charting |
+| **Nursing Tasks** | `GET/POST /api/nursing/tasks`, `POST .../toggle` | Care task checklists |
+| **Appointments** | `GET/POST /api/appointments`, `PATCH .../status` | Consultation scheduling |
+| **Messages** | `GET/POST /api/clinical-messages`, `POST .../read` | Bedside communication |
+| **Management** | `GET /api/management/overview` | Ward occupancy & operational KPIs |
+| **Simulation** | `POST /api/simulation/*`, `POST /api/demo/start` | Demo control & speed adjustment |
+
+Full interactive API documentation available at: **[http://localhost:8000/docs](http://localhost:8000/docs)** (Swagger UI)
+
+---
+
+## 🔐 Default Login Credentials
+
+| Username | Password | Role | Portal |
+| :--- | :--- | :--- | :--- |
+| `admin` | `admin123` | System Administrator | Admin Console |
+| `nurse1` | `admin123` | Nurse (Sarah) | Nurse Command Station |
+| `nurse2` | `admin123` | Nurse (Elena) | Nurse Command Station |
+| `doctor1` | `admin123` | Doctor (Dr. Vance) | Physician Console |
+| `patient1` | `admin123` | Patient (Arthur P.) | Bedside Kiosk |
+| `patient2` | `admin123` | Patient (Maria S.) | Bedside Kiosk |
+| `ops1` | `admin123` | Management | Operations Hub |
 
 ---
 
@@ -275,10 +352,11 @@ HTH196IT21/
 | Team Role | Focus Area |
 | :--- | :--- |
 | **Lead IoT Systems Architect** | ESP32 telemetry ingestion, MQTT adapter, load-cell ADC calibration |
-| **Full-Stack Clinical Software Engineer** | FastAPI async WebSocket pipeline, Trajectory $D(t)$ formulation, Pytest suite |
-| **Clinical UI/UX Designer** | Multi-role portals (Nurse Command, Doctor SBAR, Patient Tablet Kiosk, Executive) |
+| **Full-Stack Clinical Software Engineer** | FastAPI async WebSocket pipeline, Trajectory $D(t)$ formulation, HMS/EMR integration, Pytest suite |
+| **Clinical UI/UX Designer** | Multi-role portals (Nurse Command, Doctor SBAR, Patient Tablet Kiosk, Management, Admin Console) |
 
 ---
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

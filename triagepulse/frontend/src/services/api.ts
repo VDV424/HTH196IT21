@@ -16,16 +16,47 @@ export const api = {
     }
     return res.json();
   },
-  login: async (role: string, username: string, password?: string, isDemo: boolean = false, isMobile: boolean = false) => {
+  login: async (
+    usernameOrRole: string,
+    passwordOrUser?: string,
+    isDemoOrPass?: string | boolean,
+    isDemo: boolean = false,
+    isMobile: boolean = false
+  ) => {
+    let username = usernameOrRole;
+    let password = typeof passwordOrUser === 'string' ? passwordOrUser : undefined;
+    let demo = isDemo;
+    let mobile = isMobile;
+    let role: string | undefined = undefined;
+
+    if (typeof isDemoOrPass === 'string') {
+      // Legacy: role, username, password, isDemo, isMobile
+      role = usernameOrRole;
+      username = passwordOrUser || '';
+      password = isDemoOrPass;
+    } else if (typeof isDemoOrPass === 'boolean') {
+      demo = isDemoOrPass;
+    }
+
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role, username, password, is_demo: isDemo, is_mobile: isMobile })
+      body: JSON.stringify({ username, password, is_demo: demo, is_mobile: mobile, role })
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || 'Login failed');
     }
+    return res.json();
+  },
+
+  sendHardwareTelemetry: async (patientId: string, data: any) => {
+    const res = await fetch(`${API_BASE}/hardware/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: patientId, ...data })
+    });
+    if (!res.ok) throw new Error('Failed to send hardware telemetry');
     return res.json();
   },
 
@@ -218,9 +249,219 @@ export const api = {
     return res.json();
   },
 
+  // Code Blue Emergency & Hospital Management (ADT / eMAR)
+  triggerCodeBlue: async (patientId: string) => {
+    const res = await fetch(`${API_BASE}/patients/${patientId}/code-blue`, { method: 'POST' });
+    return res.json();
+  },
+  clearCodeBlue: async (patientId: string) => {
+    const res = await fetch(`${API_BASE}/patients/${patientId}/code-blue/clear`, { method: 'POST' });
+    return res.json();
+  },
+  updateBedStatus: async (patientId: string, bedStatus: string, isolation: string) => {
+    const res = await fetch(`${API_BASE}/patients/${patientId}/bed-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bed_status: bedStatus, isolation }),
+    });
+    return res.json();
+  },
+  setInfusionOrder: async (patientId: string, fluidName: string, flowRate: number) => {
+    const res = await fetch(`${API_BASE}/patients/${patientId}/emar/infusion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fluid_name: fluidName, flow_rate: flowRate }),
+    });
+    return res.json();
+  },
+
   // Management Overview
   getManagementOverview: async (): Promise<import('../types').ManagementOverview> => {
     const res = await fetch(`${API_BASE}/management/overview`);
     return res.json();
   },
+
+  // =========================================================================
+  // HOSPITAL MANAGEMENT SYSTEM (HMS) & EMR CLIENT METHODS
+  // =========================================================================
+
+  // 1. Clinical Encounters (OpenEMR SOAP Notes)
+  getEncounters: async (patientId?: string): Promise<import('../types').ClinicalEncounter[]> => {
+    const url = patientId ? `${API_BASE}/emr/encounters?patient_id=${patientId}` : `${API_BASE}/emr/encounters`;
+    const res = await fetch(url);
+    return res.json();
+  },
+  createEncounter: async (data: Partial<import('../types').ClinicalEncounter>): Promise<import('../types').ClinicalEncounter> => {
+    const res = await fetch(`${API_BASE}/emr/encounters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // 2. Prescriptions & eMAR (OpenEMR / Danphe)
+  getPrescriptions: async (patientId?: string): Promise<import('../types').Prescription[]> => {
+    const url = patientId ? `${API_BASE}/emr/prescriptions?patient_id=${patientId}` : `${API_BASE}/emr/prescriptions`;
+    const res = await fetch(url);
+    return res.json();
+  },
+  createPrescription: async (data: Partial<import('../types').Prescription>): Promise<import('../types').Prescription> => {
+    const res = await fetch(`${API_BASE}/emr/prescriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  administerMedication: async (rxId: string) => {
+    const res = await fetch(`${API_BASE}/emr/prescriptions/${rxId}/administer`, { method: 'POST' });
+    return res.json();
+  },
+  discontinueMedication: async (rxId: string) => {
+    const res = await fetch(`${API_BASE}/emr/prescriptions/${rxId}/discontinue`, { method: 'POST' });
+    return res.json();
+  },
+
+  // 3. Laboratory Orders & Results (Danphe EMR)
+  getLabOrders: async (patientId?: string): Promise<import('../types').LabOrder[]> => {
+    const url = patientId ? `${API_BASE}/emr/labs?patient_id=${patientId}` : `${API_BASE}/emr/labs`;
+    const res = await fetch(url);
+    return res.json();
+  },
+  createLabOrder: async (data: Partial<import('../types').LabOrder>): Promise<import('../types').LabOrder> => {
+    const res = await fetch(`${API_BASE}/emr/labs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  enterLabResult: async (orderId: string, resultValue: string, flag: string = 'NORMAL') => {
+    const res = await fetch(`${API_BASE}/emr/labs/${orderId}/result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ result_value: resultValue, flag }),
+    });
+    return res.json();
+  },
+
+  // 4. Ward Bed Management & ADT (Frappe Health)
+  getWardBeds: async (): Promise<import('../types').WardBed[]> => {
+    const res = await fetch(`${API_BASE}/hospital/beds`);
+    return res.json();
+  },
+  updateWardBedStatus: async (bedId: string, status: string, isolation: string = 'Standard') => {
+    const res = await fetch(`${API_BASE}/hospital/beds/${bedId}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, isolation }),
+    });
+    return res.json();
+  },
+  transferPatientBed: async (patientId: string, fromBedId: string, toBedId: string, reason: string) => {
+    const res = await fetch(`${API_BASE}/hospital/beds/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: patientId, from_bed_id: fromBedId, to_bed_id: toBedId, reason }),
+    });
+    return res.json();
+  },
+
+  // 5. Pharmacy & Consumables Inventory (Frappe Health)
+  getPharmacyInventory: async (): Promise<import('../types').PharmacyItem[]> => {
+    const res = await fetch(`${API_BASE}/hospital/inventory`);
+    return res.json();
+  },
+  restockInventory: async (itemId: string, quantity: number = 10) => {
+    const res = await fetch(`${API_BASE}/hospital/inventory/${itemId}/restock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity }),
+    });
+    return res.json();
+  },
+  deductInventory: async (itemId: string, quantity: number = 1) => {
+    const res = await fetch(`${API_BASE}/hospital/inventory/${itemId}/deduct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity }),
+    });
+    return res.json();
+  },
+
+  // 6. Fluid Intake & Output (I/O) Balance (Danphe EMR)
+  getFluidBalance: async (patientId: string): Promise<import('../types').FluidBalance[]> => {
+    const res = await fetch(`${API_BASE}/nursing/fluid-balance/${patientId}`);
+    return res.json();
+  },
+  recordFluidBalance: async (data: Partial<import('../types').FluidBalance>): Promise<import('../types').FluidBalance> => {
+    const res = await fetch(`${API_BASE}/nursing/fluid-balance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // 7. Nursing Care Tasks (Danphe EMR)
+  getNursingTasks: async (patientId?: string): Promise<import('../types').NursingCareTask[]> => {
+    const url = patientId ? `${API_BASE}/nursing/tasks?patient_id=${patientId}` : `${API_BASE}/nursing/tasks`;
+    const res = await fetch(url);
+    return res.json();
+  },
+  createNursingTask: async (data: Partial<import('../types').NursingCareTask>): Promise<import('../types').NursingCareTask> => {
+    const res = await fetch(`${API_BASE}/nursing/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  toggleNursingTask: async (taskId: string) => {
+    const res = await fetch(`${API_BASE}/nursing/tasks/${taskId}/toggle`, { method: 'POST' });
+    return res.json();
+  },
+
+  // 8. Consultation Appointments (MERN HMS)
+  getAppointments: async (patientId?: string): Promise<import('../types').Appointment[]> => {
+    const url = patientId ? `${API_BASE}/appointments?patient_id=${patientId}` : `${API_BASE}/appointments`;
+    const res = await fetch(url);
+    return res.json();
+  },
+  bookAppointment: async (data: Partial<import('../types').Appointment>): Promise<import('../types').Appointment> => {
+    const res = await fetch(`${API_BASE}/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  updateAppointmentStatus: async (aptId: string, status: string) => {
+    const res = await fetch(`${API_BASE}/appointments/${aptId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    return res.json();
+  },
+
+  // 9. Bedside Care Team Messages (MERN HMS)
+  getClinicalMessages: async (patientId: string): Promise<import('../types').ClinicalMessage[]> => {
+    const res = await fetch(`${API_BASE}/clinical-messages/${patientId}`);
+    return res.json();
+  },
+  sendClinicalMessage: async (data: Partial<import('../types').ClinicalMessage>): Promise<import('../types').ClinicalMessage> => {
+    const res = await fetch(`${API_BASE}/clinical-messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+  markMessageRead: async (msgId: string) => {
+    const res = await fetch(`${API_BASE}/clinical-messages/${msgId}/read`, { method: 'POST' });
+    return res.json();
+  },
 };
+

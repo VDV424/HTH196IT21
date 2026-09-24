@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Navbar, PortalType } from './components/Navbar';
 import { SafetyBanner } from './components/SafetyBanner';
@@ -9,26 +9,103 @@ import { AlertsPage } from './pages/AlertsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { NursePersonalPage } from './pages/NursePersonalPage';
-import { DoctorDashboardPage } from './pages/DoctorDashboardPage';
-import { PatientBedsidePage } from './pages/PatientBedsidePage';
-import { ManagementDashboardPage } from './pages/ManagementDashboardPage';
 import { LoginPage, LoginRole } from './pages/LoginPage';
-import { AdminPanelPage } from './pages/AdminPanelPage';
 import { PatientDetailModal } from './components/PatientDetailModal';
 import { Patient } from './types';
+
+// Lazy-load heavy portal pages for code-splitting (only loaded when user navigates to them)
+const DoctorDashboardPage = React.lazy(() => import('./pages/DoctorDashboardPage').then(m => ({ default: m.DoctorDashboardPage })));
+const PatientBedsidePage = React.lazy(() => import('./pages/PatientBedsidePage').then(m => ({ default: m.PatientBedsidePage })));
+const ManagementDashboardPage = React.lazy(() => import('./pages/ManagementDashboardPage').then(m => ({ default: m.ManagementDashboardPage })));
+const AdminPanelPage = React.lazy(() => import('./pages/AdminPanelPage').then(m => ({ default: m.AdminPanelPage })));
+
+// Elegant loading fallback for lazy-loaded portals
+const PortalLoader: React.FC = () => (
+  <div className="flex items-center justify-center py-24">
+    <div className="text-center animate-fade-in">
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center mx-auto mb-4 animate-float shadow-lg shadow-teal-500/20">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </div>
+      <p className="text-sm font-semibold text-slate-600">Loading Portal...</p>
+      <p className="text-xs text-slate-400 mt-1">Preparing your workspace</p>
+    </div>
+  </div>
+);
 
 export const App: React.FC = () => {
   const { patients, nurses, alerts, kpis, explanations, isConnected, simulationStatus } = useWebSocket();
 
-  // Authentication State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [loggedInRole, setLoggedInRole] = useState<LoginRole>('nurse');
-  const [loggedInUser, setLoggedInUser] = useState<{ name: string; id: string }>({ name: '', id: '' });
+  // Authentication State with localStorage session restoration
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('triagepulse_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Boolean(parsed.isLoggedIn);
+      }
+    } catch (e) {}
+    return false;
+  });
 
-  const [currentPortal, setCurrentPortal] = useState<PortalType>('nurse');
+  const [loggedInRole, setLoggedInRole] = useState<LoginRole>(() => {
+    try {
+      const saved = localStorage.getItem('triagepulse_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role) return parsed.role;
+      }
+    } catch (e) {}
+    return 'nurse';
+  });
+
+  const [loggedInUser, setLoggedInUser] = useState<{ name: string; id: string }>(() => {
+    try {
+      const saved = localStorage.getItem('triagepulse_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.user) return parsed.user;
+      }
+    } catch (e) {}
+    return { name: '', id: '' };
+  });
+
+  const [currentPortal, setCurrentPortal] = useState<PortalType>(() => {
+    try {
+      const saved = localStorage.getItem('triagepulse_auth_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role && parsed.role !== 'admin') return parsed.role as PortalType;
+      }
+    } catch (e) {}
+    return 'nurse';
+  });
+
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [currentRole, setCurrentRole] = useState<string>('Charge Nurse');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+  // Initialize nurse specific shift view on reload
+  React.useEffect(() => {
+    if (loggedInRole === 'nurse') {
+      if (loggedInUser.id === 'N01' || loggedInUser.name.toLowerCase().includes('sarah')) {
+        setCurrentRole('Nurse A');
+        setCurrentTab('my-patients');
+      } else if (loggedInUser.id === 'N02' || loggedInUser.name.toLowerCase().includes('elena')) {
+        setCurrentRole('Nurse B');
+        setCurrentTab('my-patients');
+      }
+    }
+  }, [loggedInRole, loggedInUser]);
+
+  // Strict Role Guard: Ensure current portal strictly matches loggedInRole
+  React.useEffect(() => {
+    if (isLoggedIn && loggedInRole !== 'admin') {
+      const expectedPortal = loggedInRole as PortalType;
+      if (currentPortal !== expectedPortal) {
+        setCurrentPortal(expectedPortal);
+      }
+    }
+  }, [isLoggedIn, loggedInRole, currentPortal]);
 
   // Handle Login
   const handleLogin = (role: LoginRole, credentials: { name: string; id: string }) => {
@@ -36,20 +113,44 @@ export const App: React.FC = () => {
     setLoggedInUser(credentials);
     setIsLoggedIn(true);
 
-    // Auto-route to the correct portal based on login role
+    // Save session in localStorage for multi-device / refresh resilience
+    try {
+      localStorage.setItem('triagepulse_auth_session', JSON.stringify({
+        isLoggedIn: true,
+        role,
+        user: credentials,
+        savedAt: Date.now()
+      }));
+    } catch (e) {
+      console.warn('Could not store session in localStorage', e);
+    }
+
+    // Auto-route strictly based on authenticated role
     if (role === 'admin') {
       // Admin goes to admin panel directly
     } else {
-      setCurrentPortal(role as PortalType);
+      const targetPortal = role as PortalType;
+      setCurrentPortal(targetPortal);
       if (role === 'nurse') {
-        setCurrentRole(credentials.name);
-        setCurrentTab(credentials.name === 'Charge Nurse' ? 'dashboard' : 'my-patients');
+        if (credentials.id === 'N01' || credentials.name.toLowerCase().includes('sarah')) {
+          setCurrentRole('Nurse A');
+          setCurrentTab('my-patients');
+        } else if (credentials.id === 'N02' || credentials.name.toLowerCase().includes('elena')) {
+          setCurrentRole('Nurse B');
+          setCurrentTab('my-patients');
+        } else {
+          setCurrentRole(credentials.name || 'Charge Nurse');
+          setCurrentTab(credentials.name === 'Charge Nurse' ? 'dashboard' : 'my-patients');
+        }
       }
     }
   };
 
   // Handle Logout
   const handleLogout = () => {
+    try {
+      localStorage.removeItem('triagepulse_auth_session');
+    } catch (e) {}
     setIsLoggedIn(false);
     setLoggedInRole('nurse');
     setLoggedInUser({ name: '', id: '' });
@@ -72,6 +173,7 @@ export const App: React.FC = () => {
     : null;
 
   const sosCount = kpis?.sos_active_count || patients.filter((p) => p.sos_active).length;
+  const codeBlueCount = patients.filter((p) => p.code_blue_active).length;
 
   // Show Login Page if not authenticated
   if (!isLoggedIn) {
@@ -88,7 +190,7 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 </div>
                 <div>
                   <span className="text-base font-bold text-slate-900">TriagePulse</span>
@@ -96,10 +198,10 @@ export const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-500">Signed in as <strong className="text-rose-300">{loggedInUser.name}</strong></span>
+                <span className="text-[11px] text-slate-500">Signed in as <strong className="text-rose-600">{loggedInUser.name}</strong></span>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-all"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 transition-all"
                 >
                   Sign Out
                 </button>
@@ -108,13 +210,15 @@ export const App: React.FC = () => {
           </div>
         </header>
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <AdminPanelPage onLogout={handleLogout} />
+          <Suspense fallback={<PortalLoader />}>
+            <AdminPanelPage onLogout={handleLogout} />
+          </Suspense>
         </main>
-        <footer className="border-t border-slate-900 bg-slate-50 py-4 px-6 text-center text-xs text-slate-500">
+        <footer className="border-t border-slate-200 bg-white py-4 px-6 text-center text-xs text-slate-500">
           <p>
-            <span className="font-semibold text-slate-500">TriagePulse</span> — System Administration Console
+            <span className="font-semibold text-slate-700">TriagePulse</span> — System Administration Console
           </p>
-          <p className="text-[11px] text-slate-600 mt-1">
+          <p className="text-[11px] text-slate-500 mt-1">
             Educational / Research Prototype Only • Not for Clinical Diagnosis, Medical Prescription, or Autonomous Equipment Control.
           </p>
         </footer>
@@ -129,6 +233,7 @@ export const App: React.FC = () => {
 
       {/* Top Navigation with Multi-Role Portals */}
       <Navbar
+        loggedInRole={loggedInRole}
         currentPortal={currentPortal}
         setCurrentPortal={setCurrentPortal}
         currentTab={currentTab}
@@ -147,39 +252,47 @@ export const App: React.FC = () => {
         activeAlertCount={alerts.length}
         pendingEscalationsCount={0}
         sosActiveCount={sosCount}
+        codeBlueCount={codeBlueCount}
         loggedInUser={loggedInUser}
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Strictly Role-Guarded */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* DOCTOR CLINICAL PORTAL */}
-        {currentPortal === 'doctor' && (
-          <DoctorDashboardPage
-            patients={patients}
-            onSelectPatient={handleSelectPatient}
-          />
+        {loggedInRole === 'doctor' && (
+          <Suspense fallback={<PortalLoader />}>
+            <DoctorDashboardPage
+              patients={patients}
+              onSelectPatient={handleSelectPatient}
+            />
+          </Suspense>
         )}
 
         {/* PATIENT & FAMILY BEDSIDE COMPANION TABLET */}
-        {currentPortal === 'patient' && (
-          <PatientBedsidePage
-            patients={patients}
-            onSelectPatient={handleSelectPatient}
-          />
+        {loggedInRole === 'patient' && (
+          <Suspense fallback={<PortalLoader />}>
+            <PatientBedsidePage
+              patients={patients}
+              onSelectPatient={handleSelectPatient}
+              loggedInPatientId={loggedInUser.id}
+            />
+          </Suspense>
         )}
 
         {/* HOSPITAL OPERATIONS & MANAGEMENT DASHBOARD */}
-        {currentPortal === 'management' && (
-          <ManagementDashboardPage
-            patients={patients}
-            nurses={nurses}
-            onSelectPatient={handleSelectPatient}
-          />
+        {loggedInRole === 'management' && (
+          <Suspense fallback={<PortalLoader />}>
+            <ManagementDashboardPage
+              patients={patients}
+              nurses={nurses}
+              onSelectPatient={handleSelectPatient}
+            />
+          </Suspense>
         )}
 
         {/* NURSE PORTAL (Tabs) */}
-        {currentPortal === 'nurse' && (
+        {loggedInRole === 'nurse' && (
           <>
             {currentTab === 'dashboard' && (
               <DashboardPage
@@ -242,11 +355,11 @@ export const App: React.FC = () => {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-50 py-4 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-4 px-6 text-center text-xs text-slate-500">
         <p>
-          <span className="font-semibold text-slate-500">TriagePulse</span> — Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage.
+          <span className="font-semibold text-slate-700">TriagePulse</span> — Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage.
         </p>
-        <p className="text-[11px] text-slate-600 mt-1">
+        <p className="text-[11px] text-slate-500 mt-1">
           Educational / Research Prototype Only • Not for Clinical Diagnosis, Medical Prescription, or Autonomous Equipment Control.
         </p>
       </footer>
