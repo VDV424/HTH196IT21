@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TriagePulse — Hardware Driver Setup</title>
+<hta:application 
+    id="oHTA" 
+    applicationname="TriagePulseDrivers" 
+    border="dialog" 
+    caption="yes" 
+    showintaskbar="yes" 
+    singleinstance="yes" 
+    sysmenu="yes" 
+    windowstate="normal"
+>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 24px;
+    margin: 0;
+    text-align: center;
+  }
+  h2 { color: #38bdf8; margin-top: 0; }
+  p { color: #94a3b8; font-size: 14px; line-height: 1.5; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .btn {
+    background: #2563eb;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+  }
+  .btn:hover { background: #1d4ed8; }
+  .btn-alt {
+    background: #059669;
+    margin-top: 10px;
+  }
+  .btn-alt:hover { background: #047857; }
+</style>
+<script language="javascript">
+window.resizeTo(480, 420);
+
+function installAllDrivers() {
+  try {
+    var sh = new ActiveXObject("Shell.Application");
+    sh.ShellExecute("c:\\Users\\varun\\Downloads\\hackathone project\\install_drivers.bat", "", "", "runas", 1);
+    document.getElementById("status").innerHTML = "<b style='color:#4ade80;'>Installing... Accept the UAC prompt if asked!</b>";
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+
+function openCH340Setup() {
+  try {
+    var sh = new ActiveXObject("Shell.Application");
+    sh.ShellExecute("c:\\Users\\varun\\Downloads\\hackathone project\\tools\\ch341\\SETUP.EXE", "", "", "runas", 1);
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+</script>
+</head>
+<body>
+  <h2>🔌 TriagePulse Driver Setup</h2>
+  <p>To connect the <b>Arduino UNO</b> and <b>ESP32</b>, click below to install the USB drivers:</p>
+  
+  <div class="card">
+    <button class="btn" onclick="installAllDrivers()">⚡ Install Both Drivers (Recommended)</button>
+    <button class="btn btn-alt" onclick="openCH340Setup()">🔧 Open CH340 Setup Window</button>
+  </div>
+  
+  <p id="status">Click a button above to start.</p>
+</body>
+</html>

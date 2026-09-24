@@ -10,6 +10,9 @@
 ```
 hardware/
 ├── README.md                          ← You are here
+├── esp8266_gateway/
+│   ├── esp8266_gateway.ino            ← ESP8266 / NodeMCU firmware (Patient 01 + Gateway)
+│   └── config.h                       ← WiFi, MQTT, pin, calibration config
 ├── esp32_gateway/
 │   ├── esp32_gateway.ino              ← ESP32 main firmware (Patient 01 + Gateway)
 │   └── config.h                       ← WiFi, MQTT, pin, calibration config
@@ -98,6 +101,31 @@ hardware/
 | | Pin 2 | GND | Active LOW when pressed |
 | **Buzzer** | + | **GPIO15** | Use transistor if >20mA |
 | | - | GND | |
+
+---
+
+### Patient 01 — ESP8266 (NodeMCU v2/v3) Pin Connections
+
+| Component | Signal | NodeMCU Pin | ESP8266 GPIO | Notes |
+|-----------|--------|-------------|--------------|-------|
+| **MAX30102** | VCC | 3V3 | 3.3V | ⚠️ 3.3V only! |
+| | GND | GND | GND | |
+| | SDA | **D2** | **GPIO4** | I2C Data |
+| | SCL | **D1** | **GPIO5** | I2C Clock |
+| **DS18B20** | VCC | 3V3 | 3.3V | |
+| | GND | GND | GND | |
+| | DATA | **D5** | **GPIO14** | 4.7kΩ pull-up to 3.3V |
+| **HX711** | VCC | 3V3 / VIN | 3.3V/5V | |
+| | GND | GND | GND | |
+| | DOUT | **D6** | **GPIO12** | Data Out |
+| | SCK | **D0** | **GPIO16** | Serial Clock |
+| **SOS Button** | Button | **D3** | **GPIO0** | Internal pullup (Built-in FLASH button!) |
+| | | GND | GND | Pressing FLASH triggers SOS |
+| **Buzzer** | + | **D8** | **GPIO15** | Active buzzer (10k pull-down) |
+| | - | GND | GND | |
+| **Arduino Uno RX**| RX | **D7** | **GPIO13** | SoftwareSerial RX from Uno TX (D1) |
+
+---
 
 ### DS18B20 Pull-Up Resistor
 
