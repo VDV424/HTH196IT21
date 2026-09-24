@@ -1,24 +1,26 @@
 /*
  * ============================================================================
- *  TRIAGEPULSE — ESP8266 GATEWAY FIRMWARE (RECTIFIED & OPTIMIZED)
- *  Patient 01 Direct Monitoring + Patient 02 Arduino UNO SoftwareSerial Gateway
- *  Dual Ingestion: MQTT + Direct FastAPI HTTP REST Telemetry
+ *  TRIAGEPULSE — ESP8266 GATEWAY FIRMWARE (STANDALONE ARDUINO IDE SKETCH)
+ *  Board  : NodeMCU 1.0 (ESP-12E Module)
+ *  Port   : COM10 (Silicon Labs CP210x)
+ *  Speed  : 115200 baud
  * ============================================================================
  *
- *  HARDWARE WIRING (Patient 01 on NodeMCU ESP8266):
- *    - MAX30102 (I2C: SDA=D2/GPIO4, SCL=D1/GPIO5, 3.3V, GND) → HR + SpO2
- *    - DS18B20  (OneWire: D5/GPIO14 with 4.7kΩ pull-up to 3.3V, 3.3V, GND) → Temp
- *    - HX711    (DOUT=D6/GPIO12, SCK=D0/GPIO16, 3.3V, GND) → IV Bag Load Cell
- *    - SOS Button (D3/GPIO0 or Built-in FLASH button, active LOW)
- *    - Buzzer   (D8/GPIO15 positive, GND negative)
+ *  LIBRARIES REQUIRED IN ARDUINO IDE (Install via Library Manager):
+ *    1. PubSubClient                                  (by Nick O'Leary)
+ *    2. ArduinoJson                                   (by Benoit Blanchon)
+ *    3. SparkFun MAX3010x Pulse and Proximity Sensor  (by SparkFun)
+ *    4. DallasTemperature                            (by Miles Burton)
+ *    5. OneWire                                       (by Paul Stoffregen)
+ *    6. HX711                                         (by Bogdan Necula)
  *
- *  UART RECEIVER (Patient 02 from Arduino UNO):
- *    - NodeMCU D7/GPIO13 (SoftwareSerial RX) ← 10k/20k divider from Arduino TX (D1)
- *    - Arduino GND ─── NodeMCU GND
- *
- *  COMMUNICATION PIPELINE:
- *    Primary:   MQTT Broker (Port 1883)
- *    Fallback:  Direct FastAPI REST Endpoint (POST http://<gateway_ip>:8000/api/hardware/telemetry)
+ *  NODEMCU PIN ASSIGNMENTS (Patient 01):
+ *    - MAX30102 (I2C)     : SDA = D2 (GPIO4), SCL = D1 (GPIO5)  [3.3V power!]
+ *    - DS18B20 (Temp)     : DATA = D5 (GPIO14) with 4.7kΩ pull-up to 3.3V
+ *    - HX711 (IV Bag)     : DOUT = D6 (GPIO12), SCK = D0 (GPIO16)
+ *    - SOS Button         : D3 (GPIO0) — The on-board physical FLASH button!
+ *    - Buzzer             : D8 (GPIO15)
+ *    - Uno Serial (P02)   : RX = D7 (GPIO13) from Arduino Uno TX (Pin D1)
  * ============================================================================
  */
 
@@ -35,9 +37,64 @@
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 
-#include "config.h"
+// ======================== CONFIGURATION CONSTANTS ========================
+#define WIFI_SSID               "abcd"
+#define WIFI_PASSWORD           "12345678"
+#define WIFI_MAX_RETRIES        30
 
-// ======================== HARDWARE DRIVERS ========================
+#define MQTT_BROKER_DEFAULT     "192.168.137.1"    // Laptop Hotspot host IP
+#define MQTT_PORT               1883
+#define MQTT_CLIENT_ID          "ESP8266_GATEWAY"
+#define MQTT_USER               ""
+#define MQTT_PASS               ""
+
+#define HTTP_TELEMETRY_ENABLED  true
+#define BACKEND_HTTP_PORT       8000
+#define BACKEND_HTTP_PATH       "/api/hardware/telemetry"
+#define DEMO_FALLBACK_ENABLED   true
+
+// Patient IDs
+#define PATIENT_01_ID           "P01"
+#define PATIENT_02_ID           "P02"
+#define DEVICE_01_ID            "ESP8266-P01"
+
+// MQTT Topics
+#define TOPIC_P01_VITALS        "triagepulse/patient/P01/vitals"
+#define TOPIC_P01_IV            "triagepulse/patient/P01/iv"
+#define TOPIC_P01_SOS           "triagepulse/patient/P01/sos"
+#define TOPIC_P01_STATUS        "triagepulse/patient/P01/status"
+#define TOPIC_P02_VITALS        "triagepulse/patient/P02/vitals"
+#define TOPIC_P02_IV            "triagepulse/patient/P02/iv"
+#define TOPIC_P02_SOS           "triagepulse/patient/P02/sos"
+
+// Pin Assignments
+#define PIN_MAX30102_SDA        4     // NodeMCU D2 (GPIO4)
+#define PIN_MAX30102_SCL        5     // NodeMCU D1 (GPIO5)
+#define PIN_DS18B20             14    // NodeMCU D5 (GPIO14)
+#define PIN_HX711_DOUT          12    // NodeMCU D6 (GPIO12)
+#define PIN_HX711_SCK           16    // NodeMCU D0 (GPIO16)
+#define PIN_SOS_BUTTON          0     // NodeMCU D3 (GPIO0 / FLASH button)
+#define PIN_BUZZER              15    // NodeMCU D8 (GPIO15)
+#define PIN_SWSERIAL_RX         13    // NodeMCU D7 (GPIO13 — RX from Uno TX)
+#define PIN_SWSERIAL_TX         2     // NodeMCU D4 (GPIO2 — unused TX)
+#define SWSERIAL_BAUD           9600
+
+// Calibration Constants
+#define HX711_CALIBRATION_FACTOR -420.0f
+#define IV_BAG_TARE_WEIGHT_G     25.0f
+#define IV_THRESHOLD_LOW         100.0f
+#define IV_THRESHOLD_NEAR_EMPTY  40.0f
+#define IV_THRESHOLD_EMPTY       10.0f
+#define FINGER_DETECT_THRESHOLD  30000
+
+// Intervals
+#define SENSOR_READ_INTERVAL_MS  2000
+#define MQTT_PUBLISH_INTERVAL_MS 3000
+#define STATUS_PUBLISH_INTERVAL_MS 30000
+#define SOS_DEBOUNCE_MS          300
+#define BUZZER_DURATION_MS       150
+
+// ======================== GLOBAL OBJECTS ========================
 MAX30105 particleSensor;
 OneWire oneWire(PIN_DS18B20);
 DallasTemperature tempSensor(&oneWire);
@@ -47,12 +104,12 @@ SoftwareSerial unoSerial(PIN_SWSERIAL_RX, PIN_SWSERIAL_TX);
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
-// ======================== HARDWARE DETECTION FLAGS ========================
+// Hardware Detection Flags
 bool max30102Present = false;
 bool ds18b20Present = false;
 bool hx711Present = false;
 
-// ======================== PATIENT 01 STATE ========================
+// Patient 01 State
 struct PatientData {
   float heartRate;
   float spo2;
@@ -66,14 +123,8 @@ struct PatientData {
   unsigned long lastVitalsTime;
 };
 
-PatientData patient01 = {
-  0.0, 0.0, 0.0,
-  0.0, 0.0, 0.0,
-  "NORMAL", false,
-  "MISSING", 0
-};
+PatientData patient01 = { 0, 0, 0, 0, 0, 0, "NORMAL", false, "MISSING", 0 };
 
-// ======================== HEART RATE BUFFER ========================
 #define HR_BUFFER_SIZE 4
 byte rates[HR_BUFFER_SIZE];
 byte rateSpot = 0;
@@ -81,14 +132,10 @@ unsigned long lastBeat = 0;
 float beatsPerMinute = 0;
 int beatAvg = 0;
 
-// ======================== IV FLOW TRACKING ========================
 float lastIvWeight = -1.0;
 unsigned long lastIvReadTime = 0;
-
-// ======================== SOFTWARE SERIAL BUFFER ========================
 String unoSerialBuffer = "";
 
-// ======================== TIMING ========================
 unsigned long lastSensorReadTime = 0;
 unsigned long lastMqttPublishTime = 0;
 unsigned long lastStatusPublishTime = 0;
@@ -127,7 +174,6 @@ void setup() {
 
   bootTime = millis();
 
-  // Pin Modes
   pinMode(PIN_SOS_BUTTON, INPUT_PULLUP);
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, LOW);
@@ -136,43 +182,40 @@ void setup() {
   unoSerial.begin(SWSERIAL_BAUD);
   Serial.printf("[SoftwareSerial] Listening for Patient 02 on D7 (GPIO%d) at %d baud\n", PIN_SWSERIAL_RX, SWSERIAL_BAUD);
 
-  // Initialize I2C for MAX30102
+  // Initialize I2C for MAX30102 with safety check
   Wire.begin(PIN_MAX30102_SDA, PIN_MAX30102_SCL);
-  Wire.setClock(100000); // 100kHz standard mode
+  Wire.setClock(100000);
 
-  // Initialize MAX30102
-  Serial.print(F("[MAX30102] Initializing... "));
-  if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
-    max30102Present = true;
-    Serial.println(F("OK"));
-    particleSensor.setup(
-      MAX30102_LED_BRIGHTNESS,
-      MAX30102_SAMPLE_AVERAGE,
-      MAX30102_LED_MODE,
-      MAX30102_SAMPLE_RATE,
-      MAX30102_PULSE_WIDTH,
-      MAX30102_ADC_RANGE
-    );
-    particleSensor.setPulseAmplitudeRed(0x1F);
-    particleSensor.setPulseAmplitudeGreen(0);
+  Serial.print(F("[MAX30102] Checking I2C address 0x57... "));
+  Wire.beginTransmission(0x57);
+  if (Wire.endTransmission() == 0) {
+    if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+      max30102Present = true;
+      Serial.println(F("OK"));
+      particleSensor.setup(60, 4, 2, 100, 411, 4096);
+      particleSensor.setPulseAmplitudeRed(0x1F);
+      particleSensor.setPulseAmplitudeGreen(0);
+    } else {
+      Serial.println(F("Init Failed"));
+    }
   } else {
-    Serial.println(F("NOT DETECTED (Using Demo Fallback if enabled)"));
+    Serial.println(F("NOT DETECTED (Using Demo Fallback)"));
   }
 
   // Initialize DS18B20
-  Serial.print(F("[DS18B20] Initializing... "));
+  Serial.print(F("[DS18B20] Checking OneWire sensor... "));
   tempSensor.begin();
   if (tempSensor.getDeviceCount() > 0) {
     ds18b20Present = true;
-    tempSensor.setResolution(10); // 10-bit: 0.25°C in ~187ms
+    tempSensor.setResolution(10);
     tempSensor.setWaitForConversion(true);
     Serial.println(F("OK"));
   } else {
-    Serial.println(F("NOT DETECTED (Using Demo Fallback if enabled)"));
+    Serial.println(F("NOT DETECTED (Using Demo Fallback)"));
   }
 
   // Initialize HX711
-  Serial.print(F("[HX711] Initializing... "));
+  Serial.print(F("[HX711] Checking Load Cell... "));
   scale.begin(PIN_HX711_DOUT, PIN_HX711_SCK);
   if (scale.is_ready()) {
     hx711Present = true;
@@ -180,14 +223,14 @@ void setup() {
     scale.tare();
     Serial.println(F("OK"));
   } else {
-    Serial.println(F("NOT DETECTED (Using Demo Fallback if enabled)"));
+    Serial.println(F("NOT DETECTED (Using Demo Fallback)"));
   }
 
   // Connect WiFi
   connectWiFi();
 
   // Setup MQTT
-  mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+  mqttClient.setServer(MQTT_BROKER_DEFAULT, MQTT_PORT);
   mqttClient.setBufferSize(512);
   connectMQTT();
 
@@ -201,14 +244,14 @@ void setup() {
 //  MAIN LOOP
 // ============================================================================
 void loop() {
-  yield(); // Prevent ESP8266 Software Watchdog Timer reset
+  yield(); // Keep WiFi & ESP8266 Watchdog happy
 
-  // Maintain WiFi
+  // Reconnect WiFi if dropped
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
   }
 
-  // Maintain MQTT (if broker is reachable)
+  // Reconnect MQTT if needed
   if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
     connectMQTT();
   }
@@ -218,7 +261,7 @@ void loop() {
 
   unsigned long now = millis();
 
-  // Read Patient 01 sensors
+  // Read local Patient 01 sensors
   if (now - lastSensorReadTime >= SENSOR_READ_INTERVAL_MS) {
     lastSensorReadTime = now;
     readMAX30102();
@@ -226,13 +269,13 @@ void loop() {
     readHX711();
   }
 
-  // Check SOS Button
+  // Check physical SOS Button (FLASH button)
   checkSOSButton();
 
-  // Receive Patient 02 data via SoftwareSerial
+  // Read Patient 02 data streamed from Arduino Uno
   receiveUnoUART();
 
-  // Publish / Dispatch Telemetry
+  // Transmit telemetry periodically
   if (now - lastMqttPublishTime >= MQTT_PUBLISH_INTERVAL_MS) {
     lastMqttPublishTime = now;
     publishPatient01();
@@ -247,7 +290,7 @@ void loop() {
 
 
 // ============================================================================
-//  SENSOR READING FUNCTIONS
+//  SENSOR READINGS
 // ============================================================================
 
 void readMAX30102() {
@@ -264,7 +307,6 @@ void readMAX30102() {
   }
 
   long irValue = particleSensor.getIR();
-
   if (irValue < FINGER_DETECT_THRESHOLD) {
     patient01.heartRate = 0;
     patient01.spo2 = 0;
@@ -277,17 +319,13 @@ void readMAX30102() {
   if (checkForBeat(irValue)) {
     unsigned long delta = millis() - lastBeat;
     lastBeat = millis();
-
     beatsPerMinute = 60.0 / (delta / 1000.0);
 
     if (beatsPerMinute >= 35 && beatsPerMinute <= 210) {
       rates[rateSpot++] = (byte)beatsPerMinute;
       rateSpot %= HR_BUFFER_SIZE;
-
       beatAvg = 0;
-      for (byte i = 0; i < HR_BUFFER_SIZE; i++) {
-        beatAvg += rates[i];
-      }
+      for (byte i = 0; i < HR_BUFFER_SIZE; i++) beatAvg += rates[i];
       beatAvg /= HR_BUFFER_SIZE;
     }
   }
@@ -300,8 +338,7 @@ void readMAX30102() {
   if (irValue > 0 && redValue > 0 && patient01.heartRate > 0) {
     float ratio = (float)redValue / (float)irValue;
     float spo2Est = 110.0 - 25.0 * ratio;
-    spo2Est = constrain(spo2Est, 75.0, 100.0);
-    patient01.spo2 = spo2Est;
+    patient01.spo2 = constrain(spo2Est, 75.0, 100.0);
   }
 
   patient01.lastVitalsTime = millis();
@@ -338,8 +375,7 @@ void readHX711() {
     float timeDeltaHr = (float)(now - lastIvReadTime) / 3600000.0;
     if (timeDeltaHr > 0.0001) {
       float weightDelta = lastIvWeight - weight;
-      patient01.ivFlowMlHr = weightDelta / timeDeltaHr;
-      if (patient01.ivFlowMlHr < 0) patient01.ivFlowMlHr = 0;
+      patient01.ivFlowMlHr = max(0.0f, weightDelta / timeDeltaHr);
     }
   }
 
@@ -347,19 +383,13 @@ void readHX711() {
   lastIvReadTime = now;
   patient01.ivWeightGrams = weight;
 
-  float netFluid = weight - IV_BAG_TARE_WEIGHT_G;
-  if (netFluid < 0) netFluid = 0;
+  float netFluid = max(0.0f, weight - IV_BAG_TARE_WEIGHT_G);
   patient01.ivRemainingMl = netFluid;
 
-  if (netFluid <= IV_THRESHOLD_EMPTY) {
-    patient01.ivState = "STOPPED";
-  } else if (netFluid <= IV_THRESHOLD_NEAR_EMPTY) {
-    patient01.ivState = "NEAR_EMPTY";
-  } else if (netFluid <= IV_THRESHOLD_LOW) {
-    patient01.ivState = "LOW";
-  } else {
-    patient01.ivState = "NORMAL";
-  }
+  if (netFluid <= IV_THRESHOLD_EMPTY) patient01.ivState = "STOPPED";
+  else if (netFluid <= IV_THRESHOLD_NEAR_EMPTY) patient01.ivState = "NEAR_EMPTY";
+  else if (netFluid <= IV_THRESHOLD_LOW) patient01.ivState = "LOW";
+  else patient01.ivState = "NORMAL";
 }
 
 void checkSOSButton() {
@@ -372,9 +402,9 @@ void checkSOSButton() {
 
     if (reading == LOW) {
       patient01.sosActive = true;
-      Serial.println(F("[SOS] Patient 01 SOS BUTTON PRESSED!"));
+      Serial.println(F("[SOS] Patient 01 SOS BUTTON TRIGGERED!"));
       beepBuzzer(3);
-      publishPatient01(); // Immediate broadcast
+      publishPatient01();
     } else {
       patient01.sosActive = false;
     }
@@ -383,7 +413,7 @@ void checkSOSButton() {
 
 
 // ============================================================================
-//  RECEIVE PATIENT 02 DATA FROM ARDUINO UNO VIA SOFTWARE SERIAL
+//  PATIENT 02 RECEIVER (FROM ARDUINO UNO VIA D7)
 // ============================================================================
 
 void receiveUnoUART() {
@@ -398,9 +428,7 @@ void receiveUnoUART() {
       unoSerialBuffer = "";
     } else if (c != '\r') {
       unoSerialBuffer += c;
-      if (unoSerialBuffer.length() > 300) {
-        unoSerialBuffer = "";
-      }
+      if (unoSerialBuffer.length() > 300) unoSerialBuffer = "";
     }
   }
 }
@@ -408,12 +436,7 @@ void receiveUnoUART() {
 void parseAndForwardP02(String &jsonStr) {
   StaticJsonDocument<256> doc;
   DeserializationError err = deserializeJson(doc, jsonStr);
-
-  if (err) {
-    Serial.print(F("[Uno-UART] JSON parse error: "));
-    Serial.println(err.f_str());
-    return;
-  }
+  if (err) return;
 
   float hr   = doc["hr"]   | 0.0f;
   float spo2 = doc["spo2"] | 0.0f;
@@ -422,17 +445,16 @@ void parseAndForwardP02(String &jsonStr) {
   bool  sos  = doc["sos"]  | false;
   const char* sq = doc["sq"] | "GOOD";
 
-  Serial.printf("[Uno-UART] P02: HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
+  Serial.printf("[Uno-P02] HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
                 hr, spo2, temp, iv, sos, sq);
 
-  float remaining = iv - IV_BAG_TARE_WEIGHT_G;
-  if (remaining < 0) remaining = 0;
+  float remaining = max(0.0f, iv - IV_BAG_TARE_WEIGHT_G);
   String ivState = "NORMAL";
   if (remaining <= IV_THRESHOLD_EMPTY) ivState = "STOPPED";
   else if (remaining <= IV_THRESHOLD_NEAR_EMPTY) ivState = "NEAR_EMPTY";
   else if (remaining <= IV_THRESHOLD_LOW) ivState = "LOW";
 
-  // 1. Forward to MQTT if connected
+  // 1. MQTT Dispatch
   if (mqttClient.connected()) {
     StaticJsonDocument<200> vDoc;
     vDoc["heart_rate"] = hr;
@@ -456,7 +478,7 @@ void parseAndForwardP02(String &jsonStr) {
     mqttClient.publish(TOPIC_P02_SOS, buf);
   }
 
-  // 2. Direct HTTP Fallback to FastAPI
+  // 2. Direct FastAPI REST Telemetry
   if (HTTP_TELEMETRY_ENABLED && WiFi.status() == WL_CONNECTED) {
     sendHttpTelemetry("P02", hr, spo2, temp, iv, sos, sq, ivState, 0.0);
   }
@@ -464,11 +486,10 @@ void parseAndForwardP02(String &jsonStr) {
 
 
 // ============================================================================
-//  TELEMETRY DISPATCH (MQTT + HTTP DUAL MODE)
+//  TELEMETRY DISPATCH (MQTT + REST)
 // ============================================================================
 
 void publishPatient01() {
-  // 1. MQTT Publish (if broker reachable)
   if (mqttClient.connected()) {
     StaticJsonDocument<200> vDoc;
     vDoc["heart_rate"] = patient01.heartRate;
@@ -493,7 +514,6 @@ void publishPatient01() {
     mqttClient.publish(TOPIC_P01_SOS, buf);
   }
 
-  // 2. Direct HTTP Telemetry to FastAPI backend
   if (HTTP_TELEMETRY_ENABLED && WiFi.status() == WL_CONNECTED) {
     sendHttpTelemetry("P01", patient01.heartRate, patient01.spo2,
                       patient01.temperature, patient01.ivWeightGrams,
@@ -501,18 +521,15 @@ void publishPatient01() {
                       patient01.ivState, patient01.ivFlowMlHr);
   }
 
-  Serial.printf("[TELEMETRY] P01: HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
+  Serial.printf("[P01] HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
                 patient01.heartRate, patient01.spo2, patient01.temperature,
                 patient01.ivWeightGrams, patient01.sosActive, patient01.signalQuality.c_str());
 }
 
 String getBackendHost() {
-  // If connected to Hotspot, gateway IP is usually the host PC (192.168.137.1)
   IPAddress gw = WiFi.gatewayIP();
-  if (gw != IPAddress(0, 0, 0, 0)) {
-    return gw.toString();
-  }
-  return String(MQTT_BROKER);
+  if (gw != IPAddress(0, 0, 0, 0)) return gw.toString();
+  return String(MQTT_BROKER_DEFAULT);
 }
 
 void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp, float ivWeight, bool sos, const String& sq, const String& ivState, float ivFlow) {
@@ -523,7 +540,7 @@ void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp
 
   http.begin(client, url);
   http.addHeader("Content-Type", "application/json");
-  http.setTimeout(1200); // 1.2s timeout so loop never hangs
+  http.setTimeout(1200);
 
   StaticJsonDocument<300> doc;
   doc["patient_id"] = patientId;
@@ -539,17 +556,12 @@ void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp
 
   String jsonPayload;
   serializeJson(doc, jsonPayload);
-
-  int httpCode = http.POST(jsonPayload);
-  if (httpCode > 0) {
-    // Ingested successfully into FastAPI backend
-  }
+  http.POST(jsonPayload);
   http.end();
 }
 
 void publishDeviceStatus() {
   if (!mqttClient.connected()) return;
-
   unsigned long uptimeSec = (millis() - bootTime) / 1000;
   StaticJsonDocument<200> doc;
   doc["device_id"] = DEVICE_01_ID;
@@ -564,19 +576,18 @@ void publishDeviceStatus() {
 
 
 // ============================================================================
-//  WIFI & MQTT CONNECTION
+//  WIFI & MQTT
 // ============================================================================
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
-
   Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   int retries = 0;
   while (WiFi.status() != WL_CONNECTED && retries < WIFI_MAX_RETRIES) {
-    delay(WIFI_RETRY_DELAY);
+    delay(500);
     Serial.print(".");
     retries++;
     yield();
@@ -584,9 +595,8 @@ void connectWiFi() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(F(" CONNECTED!"));
-    Serial.printf("[WiFi] IP: %s  RSSI: %ddBm  Gateway: %s\n",
-                  WiFi.localIP().toString().c_str(), WiFi.RSSI(),
-                  WiFi.gatewayIP().toString().c_str());
+    Serial.printf("[WiFi] IP: %s  Gateway: %s\n",
+                  WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
     beepBuzzer(1);
   } else {
     Serial.println(F(" FAILED! Will retry in background..."));
@@ -595,30 +605,21 @@ void connectWiFi() {
 
 void connectMQTT() {
   if (WiFi.status() != WL_CONNECTED) return;
-
   String broker = getBackendHost();
   Serial.printf("[MQTT] Connecting to %s:%d... ", broker.c_str(), MQTT_PORT);
   mqttClient.setServer(broker.c_str(), MQTT_PORT);
 
   bool connected = false;
-  if (strlen(MQTT_USER) > 0) {
-    connected = mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
-  } else {
-    connected = mqttClient.connect(MQTT_CLIENT_ID);
-  }
+  if (strlen(MQTT_USER) > 0) connected = mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
+  else connected = mqttClient.connect(MQTT_CLIENT_ID);
 
   if (connected) {
     Serial.println(F("CONNECTED!"));
     beepBuzzer(2);
   } else {
-    Serial.printf("FAILED (rc=%d). Direct HTTP REST telemetry active.\n", mqttClient.state());
+    Serial.printf("FAILED (rc=%d). Direct REST Telemetry Active.\n", mqttClient.state());
   }
 }
-
-
-// ============================================================================
-//  BUZZER (COMPATIBLE WITH ACTIVE AND PASSIVE PIEZO BUZZERS)
-// ============================================================================
 
 void beepBuzzer(int count) {
   for (int i = 0; i < count; i++) {
