@@ -99,6 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -110,19 +111,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSignUpMode) {
+      await handleSignUp();
+      return;
+    }
+
     setIsLoggingIn(true);
-    
     try {
       const username = userName || config.defaultUser;
-      // Exact login sends isDemo=false. This tells the backend to clear simulation data!
       const res = await api.login(selectedRole, username, password, false);
-      
       onLogin(selectedRole as LoginRole, {
         name: res.user,
         id: config.defaultId,
       });
     } catch (err: any) {
       alert(err.message || 'Login failed.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    setIsLoggingIn(true);
+    try {
+      if (!userName || !password) {
+        throw new Error('Username and password are required for sign up.');
+      }
+      const res = await api.signup(selectedRole, userName, password);
+      alert(res.message); // Success message
+      setIsSignUpMode(false); // Switch back to login mode after successful signup
+    } catch (err: any) {
+      alert(err.message || 'Sign up failed.');
     } finally {
       setIsLoggingIn(false);
     }
@@ -297,7 +316,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                 </div>
               </div>
 
-              {/* Login Button */}
+              {/* Login/Signup Button */}
               <button
                 type="submit"
                 disabled={isLoggingIn}
@@ -306,15 +325,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                 {isLoggingIn ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>{isSignUpMode ? 'Creating Account...' : 'Authenticating...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>Sign In to {config.label}</span>
+                    <span>{isSignUpMode ? `Create ${config.label} Account` : `Sign In to ${config.label}`}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
+
+              <div className="text-center mt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSignUpMode(!isSignUpMode)}
+                  className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                >
+                  {isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
             </form>
 
             {/* Quick Login Shortcuts */}

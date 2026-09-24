@@ -4,6 +4,18 @@ const API_BASE = '/api';
 
 export const api = {
   // Auth
+  signup: async (role: string, username: string, password?: string) => {
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, username, password })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Signup failed');
+    }
+    return res.json();
+  },
   login: async (role: string, username: string, password?: string, isDemo: boolean = false) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',

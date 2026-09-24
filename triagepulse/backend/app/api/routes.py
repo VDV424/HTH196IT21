@@ -48,6 +48,26 @@ class LoginRequest(BaseModel):
     password: Optional[str] = None
     is_demo: bool = False
 
+class SignupRequest(BaseModel):
+    role: str
+    username: str
+    password: str
+
+# In-memory store for registered users (Prototype DB)
+registered_users: Dict[str, str] = {}
+
+@router.post("/auth/signup")
+def signup(req: SignupRequest):
+    if req.username in registered_users:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Store user credentials (in a real app, hash the password!)
+    registered_users[req.username] = req.password
+    return {"status": "success", "message": f"User {req.username} registered successfully"}
+
 @router.post("/auth/login")
 def login(req: LoginRequest, request: Request):
     # 1. Enforce Admin Security Rule at the backend level
@@ -62,8 +82,16 @@ def login(req: LoginRequest, request: Request):
         # Require password for exact login
         if not req.password:
             raise HTTPException(status_code=401, detail="Password required for secure login")
-        # In a real app, verify against SQLite/DB. Here we use a secure mock check for prototype.
-        if req.password != "admin123":
+            
+        # In a real app, verify against SQLite/DB. Here we use our mock DB + demo fallback.
+        valid_password = False
+        if req.username in registered_users:
+            if registered_users[req.username] == req.password:
+                valid_password = True
+        elif req.password == "admin123":
+            valid_password = True
+            
+        if not valid_password:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         # 3. Clear preset simulation data for exact login (ready for hardware)
