@@ -106,6 +106,8 @@ class NurseSummary(BaseModel):
     high_priority_count: int = 0
     capabilities: List[str] = []
     workload_percent: float = 0.0
+    is_committed_to_serious: bool = False
+    current_distance_m: Optional[float] = None
 
 class AlertModel(BaseModel):
     id: str
@@ -203,3 +205,5 @@ class AllocationExplanation(BaseModel):
     current_workload: str
     location: str
     reason: str
+    distance_m: Optional[float] = None
+    routing_strategy: Optional[str] = None

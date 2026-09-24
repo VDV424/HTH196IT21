@@ -16,16 +16,38 @@ export const api = {
     }
     return res.json();
   },
-  login: async (role: string, username: string, password?: string, isDemo: boolean = false) => {
+  login: async (role: string, username: string, password?: string, isDemo: boolean = false, isMobile: boolean = false) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role, username, password, is_demo: isDemo })
+      body: JSON.stringify({ role, username, password, is_demo: isDemo, is_mobile: isMobile })
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || 'Login failed');
     }
+    return res.json();
+  },
+
+  // Admin User Approvals & Management
+  getAdminUsers: async () => {
+    const res = await fetch(`${API_BASE}/admin/users`);
+    if (!res.ok) throw new Error('Failed to fetch user accounts');
+    return res.json();
+  },
+  approveUser: async (username: string) => {
+    const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(username)}/approve`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to approve user');
+    return res.json();
+  },
+  rejectUser: async (username: string) => {
+    const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(username)}/reject`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to reject user');
+    return res.json();
+  },
+  deleteUser: async (username: string) => {
+    const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete user');
     return res.json();
   },
 

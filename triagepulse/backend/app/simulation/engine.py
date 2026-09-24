@@ -207,8 +207,10 @@ class SimulationEngine:
         p = self.patients[patient_id]
         p.sos_active = True
         p.sos_triggered_at = datetime.now(timezone.utc).isoformat()
-        # Immediately boost attention priority to maximum
+        # Immediately boost attention priority to maximum emergency level
         p.trajectory.attention_priority = max(p.trajectory.attention_priority, 95.0)
+        self._update_patient_trajectory_and_alerts(p)
+        self._reallocate()
         return True
 
     def clear_sos(self, patient_id: str) -> bool:
@@ -218,6 +220,8 @@ class SimulationEngine:
         p = self.patients[patient_id]
         p.sos_active = False
         p.sos_triggered_at = None
+        self._update_patient_trajectory_and_alerts(p)
+        self._reallocate()
         return True
 
     def trigger_request(self, patient_id: str, request_type: str = "General") -> bool:
@@ -271,7 +275,8 @@ class SimulationEngine:
     def ingest_hardware_vitals(self, patient_id: str, vitals_payload: Dict[str, Any]):
         """
         Receives external MQTT or HTTP vitals from ESP32 physical device.
-        Also handles SOS and Request button presses from hardware.
+        Also handles SOS and Request button presses from hardware, and
+        HX711 IV load cell weight telemetry.
         """
         if patient_id not in self.patients:
             return
@@ -284,9 +289,9 @@ class SimulationEngine:
             sig = SignalQuality.GOOD
 
         vitals = VitalsData(
-            heart_rate=float(vitals_payload.get("heart_rate", p.baseline_hr)),
-            spo2=float(vitals_payload.get("spo2", p.baseline_spo2)),
-            temperature=float(vitals_payload.get("temperature", p.baseline_temp)),
+            heart_rate=float(vitals_payload.get("heart_rate", p.current_vitals.heart_rate if p.current_vitals.heart_rate > 0 else p.baseline_hr)),
+            spo2=float(vitals_payload.get("spo2", p.current_vitals.spo2 if p.current_vitals.spo2 > 0 else p.baseline_spo2)),
+            temperature=float(vitals_payload.get("temperature", p.current_vitals.temperature if p.current_vitals.temperature > 0 else p.baseline_temp)),
             motion=float(vitals_payload.get("motion", 0.1)),
             signal_quality=sig,
             timestamp=now_str
@@ -295,6 +300,18 @@ class SimulationEngine:
         p.data_source = DataSource.PHYSICAL_DEVICE
         if "device_id" in vitals_payload:
             p.device_id = vitals_payload["device_id"]
+
+        # Ingest HX711 Load Cell / IV data if present
+        if "iv_remaining_ml" in vitals_payload or "iv_weight" in vitals_payload or "iv_flow" in vitals_payload:
+            rem = float(vitals_payload.get("iv_remaining_ml", vitals_payload.get("iv_weight", p.current_iv.iv_remaining_ml)))
+            flow = float(vitals_payload.get("iv_flow", p.current_iv.iv_flow))
+            state = vitals_payload.get("iv_state", p.current_iv.iv_state)
+            est = round((rem / flow) * 60.0, 1) if flow > 0 else None
+            p.current_iv.iv_remaining_ml = rem
+            p.current_iv.iv_weight = float(vitals_payload.get("iv_weight", rem))
+            p.current_iv.iv_flow = flow
+            p.current_iv.iv_state = state
+            p.current_iv.estimated_time_to_empty_min = est
 
         # Handle SOS / Request buttons from hardware (ESP32 GPIO)
         if vitals_payload.get("sos", False):
@@ -308,6 +325,7 @@ class SimulationEngine:
             self.trigger_request(patient_id, req_type)
 
         self._update_patient_trajectory_and_alerts(p)
+        self._reallocate()
 
     def _update_patient_trajectory_and_alerts(self, patient: PatientSummary):
         pid = patient.patient_id

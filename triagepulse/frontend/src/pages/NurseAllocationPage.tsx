@@ -199,32 +199,56 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {explanations.map((exp) => {
             const isOverflow = exp.nurse_id === 'UNASSIGNED';
+            const isProximity = exp.routing_strategy === 'PROXIMITY_NON_CRITICAL';
+            const isEmergencyOverride = exp.routing_strategy === 'EMERGENCY_DISTANCE_OVERRIDE';
+
             return (
               <div
                 key={exp.patient_id}
-                className={`p-3.5 rounded-lg border text-xs ${
-                  isOverflow
+                className={`p-3.5 rounded-lg border text-xs transition-all ${
+                  isEmergencyOverride
+                    ? 'bg-amber-500/10 border-amber-500/50 shadow-sm'
+                    : isProximity
+                    ? 'bg-teal-500/10 border-teal-500/40 shadow-sm'
+                    : isOverflow
                     ? 'bg-rose-950/20 border-rose-500/50'
                     : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-900 font-mono">{exp.patient_id}</span>
                     <span className="text-slate-500">→</span>
                     <span className={`font-semibold ${isOverflow ? 'text-rose-400' : 'text-teal-600'}`}>
                       {exp.nurse_name}
                     </span>
+                    {exp.distance_m && (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        ({exp.distance_m.toFixed(0)}m away)
+                      </span>
+                    )}
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                    exp.priority_level === 'HIGH' || isOverflow
-                      ? 'bg-rose-500/20 text-rose-300'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {exp.priority_level}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isProximity && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-300">
+                        PROXIMITY DISPATCH
+                      </span>
+                    )}
+                    {isEmergencyOverride && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                        EMERGENCY OVERRIDE
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                      exp.priority_level === 'EMERGENCY' || exp.priority_level === 'HIGH' || isOverflow
+                        ? 'bg-rose-500/20 text-rose-700 font-bold'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {exp.priority_level}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-slate-600 leading-relaxed font-mono text-[11px]">
+                <p className="text-slate-700 leading-relaxed font-mono text-[11px]">
                   {exp.reason}
                 </p>
               </div>

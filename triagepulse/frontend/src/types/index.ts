@@ -83,6 +83,8 @@ export interface Nurse {
   high_priority_count: number;
   capabilities: string[];
   workload_percent: number;
+  is_committed_to_serious?: boolean;
+  current_distance_m?: number;
 }
 
 export interface Alert {
@@ -133,6 +135,8 @@ export interface AllocationExplanation {
   current_workload: string;
   location: string;
   reason: string;
+  distance_m?: number;
+  routing_strategy?: string;
 }
 
 export interface DoctorEscalationRecord {

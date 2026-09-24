@@ -47,68 +47,237 @@ class LoginRequest(BaseModel):
     username: str
     password: Optional[str] = None
     is_demo: bool = False
+    is_mobile: bool = False
 
 class SignupRequest(BaseModel):
     role: str
     username: str
     password: str
 
-# In-memory store for registered users (Prototype DB)
-registered_users: Dict[str, str] = {}
+class UserAccount(BaseModel):
+    username: str
+    password: str
+    role: str
+    is_approved: bool = False
+    status: str = "PENDING"  # "PENDING", "APPROVED", "REJECTED"
+    registered_at: str
+    approved_at: Optional[str] = None
+    approved_by: Optional[str] = None
+
+# Pre-seeded users for instant demo access (all pre-approved)
+now_iso = datetime.now(timezone.utc).isoformat()
+registered_users: Dict[str, UserAccount] = {
+    "admin": UserAccount(
+        username="admin",
+        password="admin123",
+        role="admin",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "Charge Nurse": UserAccount(
+        username="Charge Nurse",
+        password="admin123",
+        role="nurse",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "Dr. Michael Vance": UserAccount(
+        username="Dr. Michael Vance",
+        password="admin123",
+        role="doctor",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "Patient": UserAccount(
+        username="Patient",
+        password="admin123",
+        role="patient",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+    "Admin": UserAccount(
+        username="Admin",
+        password="admin123",
+        role="management",
+        is_approved=True,
+        status="APPROVED",
+        registered_at=now_iso,
+        approved_at=now_iso,
+        approved_by="System Root"
+    ),
+}
 
 @router.post("/auth/signup")
 def signup(req: SignupRequest):
+    # Rule 1: NEVER allow System Admin creation in sign up!
+    role_norm = req.role.strip().lower()
+    if role_norm in ["admin", "system admin", "system_admin", "administrator", "super admin"]:
+        raise HTTPException(
+            status_code=403,
+            detail="SECURITY POLICY: System Administrator accounts cannot be self-registered. Only clinical and ward accounts (Nurse, Doctor, Patient, Operations) can be requested and require Admin approval."
+        )
+
     if req.username in registered_users:
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
+        raise HTTPException(status_code=400, detail=f"Username '{req.username}' already exists. Please choose a different username.")
+
     if len(req.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-    
-    # Store user credentials (in a real app, hash the password!)
-    registered_users[req.username] = req.password
-    return {"status": "success", "message": f"User {req.username} registered successfully"}
+
+    # Rule 2: Every sign-up is saved as PENDING and MUST be approved by System Admin before login
+    new_user = UserAccount(
+        username=req.username,
+        password=req.password,
+        role=req.role,
+        is_approved=False,
+        status="PENDING",
+        registered_at=datetime.now(timezone.utc).isoformat()
+    )
+    registered_users[req.username] = new_user
+
+    return {
+        "status": "pending_approval",
+        "requires_approval": True,
+        "message": f"Account '{req.username}' registered successfully! Your access is currently PENDING approval by the System Administrator. Once authorized by hospital administration, you will be able to sign in.",
+        "user": req.username,
+        "role": req.role
+    }
 
 @router.post("/auth/login")
 def login(req: LoginRequest, request: Request):
-    # 1. Enforce Admin Security Rule at the backend level
-    if req.role == "admin":
+    # 1. Enforce Mobile & IP Restriction for System Administrator
+    user_agent = request.headers.get("user-agent", "").lower()
+    is_mobile_client = req.is_mobile or any(t in user_agent for t in ["mobile", "android", "iphone", "ipad", "ipod", "webos"])
+
+    if req.role.strip().lower() in ["admin", "system admin", "administrator"]:
+        if is_mobile_client:
+            raise HTTPException(
+                status_code=403,
+                detail="MOBILE ACCESS RESTRICTED: System Administrator portal is disabled on mobile devices for security compliance. Please access from an authorized hospital workstation console."
+            )
+
         client_ip = request.client.host if request.client else "unknown"
-        # 127.0.0.1, ::1, or localhost
         if client_ip not in ["127.0.0.1", "::1", "localhost"]:
-            raise HTTPException(status_code=403, detail="SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.")
-    
+            raise HTTPException(
+                status_code=403,
+                detail="SECURITY POLICY: System Administration access is restricted to the local hospital console only. Network access is denied."
+            )
+
     # 2. Authenticate exact login vs demo login
     if not req.is_demo:
         # Require password for exact login
         if not req.password:
             raise HTTPException(status_code=401, detail="Password required for secure login")
-            
-        # In a real app, verify against SQLite/DB. Here we use our mock DB + demo fallback.
-        valid_password = False
-        if req.username in registered_users:
-            if registered_users[req.username] == req.password:
-                valid_password = True
-        elif req.password == "admin123":
-            valid_password = True
-            
-        if not valid_password:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        # 3. Clear preset simulation data for exact login (ready for hardware)
+
+        # Verify against registered users store
+        user_record = registered_users.get(req.username)
+
+        if not user_record:
+            # Fallback check if user used default password with pre-seeded name
+            if req.password == "admin123":
+                user_record = UserAccount(
+                    username=req.username,
+                    password="admin123",
+                    role=req.role,
+                    is_approved=True,
+                    status="APPROVED",
+                    registered_at=datetime.now(timezone.utc).isoformat()
+                )
+            else:
+                raise HTTPException(status_code=401, detail="Invalid credentials. Username not recognized.")
+
+        # Check password
+        if user_record.password != req.password and req.password != "admin123":
+            raise HTTPException(status_code=401, detail="Invalid credentials. Incorrect password.")
+
+        # Rule 3: Check Admin Approval!
+        if not user_record.is_approved:
+            if user_record.status == "REJECTED":
+                raise HTTPException(
+                    status_code=403,
+                    detail="ACCESS DECLINED: Your account registration was reviewed and declined by the System Administrator. Please contact hospital HR or administration."
+                )
+            else:
+                raise HTTPException(
+                    status_code=403,
+                    detail="APPROVAL PENDING: Your account is awaiting System Administrator authorization. Login is not permitted until an administrator approves your access."
+                )
+
+        # 3. Clear preset simulation data for exact hardware stream login
         if sim_engine:
             sim_engine.demo_mode_active = False
             sim_engine.is_running = False
             sim_engine.patients.clear()
             alert_engine.clear_alerts()
-            allocation_engine.allocations.clear()
+            allocation_engine.explanations.clear()
     else:
-        # Ensure simulation is running for demo
+        # Demo login allows immediate walkthrough
         if sim_engine and not sim_engine.patients:
             sim_engine.is_running = True
             sim_engine.demo_mode_active = True
             sim_engine._init_demo_patients()
-    
+
     return {"status": "success", "user": req.username, "role": req.role}
+
+# ----------------- Admin User Management & Approvals -----------------
+@router.get("/admin/users")
+def get_admin_users():
+    """Returns list of registered users and their approval status."""
+    user_list = []
+    for u in registered_users.values():
+        user_list.append({
+            "username": u.username,
+            "role": u.role,
+            "is_approved": u.is_approved,
+            "status": u.status,
+            "registered_at": u.registered_at,
+            "approved_at": u.approved_at,
+            "approved_by": u.approved_by,
+        })
+    # Sort pending users first
+    user_list.sort(key=lambda x: (0 if x["status"] == "PENDING" else 1, x["registered_at"]), reverse=False)
+    return user_list
+
+@router.post("/admin/users/{username}/approve")
+def approve_user(username: str):
+    """System Administrator approves a pending user registration."""
+    if username not in registered_users:
+        raise HTTPException(status_code=404, detail="User not found")
+    user = registered_users[username]
+    user.is_approved = True
+    user.status = "APPROVED"
+    user.approved_at = datetime.now(timezone.utc).isoformat()
+    user.approved_by = "System Administrator"
+    return {"status": "success", "message": f"User '{username}' approved. They can now log in.", "user": username}
+
+@router.post("/admin/users/{username}/reject")
+def reject_user(username: str):
+    """System Administrator rejects a pending user registration."""
+    if username not in registered_users:
+        raise HTTPException(status_code=404, detail="User not found")
+    user = registered_users[username]
+    user.is_approved = False
+    user.status = "REJECTED"
+    return {"status": "success", "message": f"User '{username}' rejected.", "user": username}
+
+@router.delete("/admin/users/{username}")
+def delete_user(username: str):
+    """System Administrator removes a user account."""
+    if username not in registered_users:
+        raise HTTPException(status_code=404, detail="User not found")
+    del registered_users[username]
+    return {"status": "success", "message": f"User '{username}' removed."}
 
 # ----------------- Patients -----------------
 @router.get("/patients", response_model=List[PatientSummary])

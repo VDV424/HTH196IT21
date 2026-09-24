@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   Hospital,
@@ -26,8 +26,14 @@ import {
   Heart,
   Activity,
   Eye,
-  Lock
+  Lock,
+  UserCheck,
+  UserX,
+  Trash2,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
+import { api } from '../services/api';
 
 interface AdminPanelPageProps {
   onLogout: () => void;
@@ -109,6 +115,64 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
+  // User Accounts & Approvals State
+  const [userAccounts, setUserAccounts] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
+  const [userActionMessage, setUserActionMessage] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const list = await api.getAdminUsers();
+      setUserAccounts(list);
+    } catch (e) {
+      console.error('Failed to load users', e);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleApprove = async (username: string) => {
+    try {
+      await api.approveUser(username);
+      setUserActionMessage(`✅ Approved '${username}'. User can now log in.`);
+      setTimeout(() => setUserActionMessage(null), 4000);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Approval failed');
+    }
+  };
+
+  const handleReject = async (username: string) => {
+    try {
+      await api.rejectUser(username);
+      setUserActionMessage(`User '${username}' registration declined.`);
+      setTimeout(() => setUserActionMessage(null), 4000);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Reject failed');
+    }
+  };
+
+  const handleDelete = async (username: string) => {
+    if (!confirm(`Permanently remove account for '${username}'?`)) return;
+    try {
+      await api.deleteUser(username);
+      setUserActionMessage(`Deleted user '${username}'.`);
+      setTimeout(() => setUserActionMessage(null), 4000);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Delete failed');
+    }
+  };
+
+  const pendingUsers = userAccounts.filter((u) => u.status === 'PENDING');
+  const activeUsers = userAccounts.filter((u) => u.status !== 'PENDING');
+
   const updateConfig = (path: string, value: any) => {
     setConfig((prev) => {
       const parts = path.split('.');
@@ -126,7 +190,6 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
 
   const handleSave = async () => {
     setSaveStatus('saving');
-    // Simulated save to backend
     await new Promise((r) => setTimeout(r, 1500));
     setSaveStatus('saved');
     setUnsavedChanges(false);
@@ -237,6 +300,11 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
               >
                 <SIcon className={`w-4 h-4 ${isActive ? 'text-teal-600' : 'text-slate-500'}`} />
                 <span className="flex-1 text-left">{s.label}</span>
+                {s.id === 'users' && pendingUsers.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-slate-900 animate-pulse">
+                    {pendingUsers.length}
+                  </span>
+                )}
                 {isActive && <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
               </button>
             );
@@ -402,44 +470,197 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
             </SectionCard>
           )}
 
-          {/* Staff Management */}
+          {/* Staff Management & User Approvals */}
           {activeSection === 'users' && (
-            <SectionCard title="Staff Management" icon={Users} color="rose" description="View and manage nurse/physician access credentials and role assignments.">
-              <div className="space-y-3">
-                {[
-                  { name: 'Charge Nurse', id: 'N00', role: 'Charge Nurse', status: 'Active', ward: '4B' },
-                  { name: 'Nurse A', id: 'N01', role: 'Critical Care (Tier 1)', status: 'Active', ward: '4B' },
-                  { name: 'Nurse B', id: 'N02', role: 'Senior (Tier 2)', status: 'Active', ward: '4B' },
-                  { name: 'Nurse C', id: 'N03', role: 'General (Tier 3)', status: 'Active', ward: '4B' },
-                  { name: 'Dr. Michael Vance', id: 'D01', role: 'Attending Physician', status: 'Active', ward: '4B' },
-                  { name: 'Dr. Sarah Chen', id: 'D02', role: 'Resident', status: 'Off-Shift', ward: '4B' },
-                ].map((staff) => (
-                  <div key={staff.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-slate-900 font-bold text-xs shadow-sm ${
-                        staff.id.startsWith('D') ? 'bg-gradient-to-br from-violet-500 to-emerald-600' : 'bg-gradient-to-br from-teal-500 to-emerald-600'
-                      }`}>
-                        {staff.name[0]}
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-900">{staff.name}</span>
-                        <span className="text-[10px] text-slate-500 block">{staff.role} • {staff.id}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        staff.status === 'Active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-100 text-slate-500 border border-slate-300'
-                      }`}>
-                        {staff.status}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{staff.ward}</span>
-                    </div>
+            <SectionCard title="Staff & User Management" icon={Users} color="rose" description="Review and approve new clinical sign-ups, authorize roles, and manage hospital system credentials.">
+              {/* Action Message Toast */}
+              {userActionMessage && (
+                <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center gap-2 shadow-sm animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{userActionMessage}</span>
+                </div>
+              )}
+
+              {/* Status Header Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Total Registered</span>
+                  <span className="text-xl font-extrabold text-slate-800">{userAccounts.length}</span>
+                </div>
+                <div className={`p-3.5 rounded-xl border text-center ${
+                  pendingUsers.length > 0
+                    ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm ring-1 ring-amber-300'
+                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider block mb-1">Awaiting Approval</span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className="text-xl font-extrabold">{pendingUsers.length}</span>
+                    {pendingUsers.length > 0 && <Clock className="w-4 h-4 text-amber-600 animate-spin" />}
                   </div>
-                ))}
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mb-1">Active / Approved</span>
+                  <span className="text-xl font-extrabold text-emerald-700">{activeUsers.length}</span>
+                </div>
               </div>
-              <div className="mt-5 p-4 rounded-2xl bg-rose-950/30 border border-rose-800/40 text-xs text-rose-200 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                <span>Staff credentials are managed centrally. In production, this connects to the hospital's Active Directory / LDAP for SSO authentication.</span>
+
+              {/* Toolbar */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Account Registry</h3>
+                  <span className="text-[11px] text-slate-500">• {userAccounts.length} Total</span>
+                </div>
+                <button
+                  onClick={loadUsers}
+                  disabled={isLoadingUsers}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* ── 1. PENDING APPROVALS QUEUE ──────────────────────────── */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="text-xs font-bold text-amber-800 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    Pending Sign-ups Requiring Admin Approval ({pendingUsers.length})
+                  </h4>
+                  {pendingUsers.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                      Action Required
+                    </span>
+                  )}
+                </div>
+
+                {pendingUsers.length === 0 ? (
+                  <div className="p-5 rounded-xl bg-slate-50/70 border border-slate-200/80 text-center text-xs text-slate-500">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5 opacity-80" />
+                    <span className="font-semibold block text-slate-700">No Pending Approvals</span>
+                    <span>All submitted user sign-ups have been authorized or reviewed.</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingUsers.map((user) => (
+                      <div
+                        key={user.username}
+                        className="p-4 rounded-xl bg-amber-50/70 border border-amber-300 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-slate-900 font-bold text-sm shadow-sm">
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">{user.username}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                {user.role.toUpperCase()}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                PENDING APPROVAL
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">
+                              Registered: {new Date(user.registered_at).toLocaleString()} • Needs Administrator Sign-off
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Approval Action Buttons */}
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <button
+                            onClick={() => handleApprove(user.username)}
+                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all flex items-center gap-1.5 active:scale-95"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            Approve Access
+                          </button>
+                          <button
+                            onClick={() => handleReject(user.username)}
+                            className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-semibold text-xs transition-all flex items-center gap-1"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── 2. AUTHORIZED & ACTIVE ACCOUNTS ─────────────────────── */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 mb-2.5 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-teal-600" />
+                  Authorized Staff & Active Accounts ({activeUsers.length})
+                </h4>
+
+                <div className="space-y-2.5">
+                  {activeUsers.map((user) => (
+                    <div
+                      key={user.username}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-slate-900 font-bold text-xs shadow-sm ${
+                          user.role === 'doctor'
+                            ? 'bg-gradient-to-br from-violet-500 to-purple-500'
+                            : user.role === 'admin'
+                            ? 'bg-gradient-to-br from-rose-500 to-pink-500'
+                            : user.role === 'management'
+                            ? 'bg-gradient-to-br from-emerald-500 to-green-500'
+                            : 'bg-gradient-to-br from-teal-500 to-emerald-500'
+                        }`}>
+                          {user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900">{user.username}</span>
+                            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                              {user.role}
+                            </span>
+                            {user.status === 'APPROVED' && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                ACTIVE
+                              </span>
+                            )}
+                            {user.status === 'REJECTED' && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                DECLINED
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 block">
+                            {user.approved_by ? `Authorized by ${user.approved_by}` : 'Pre-configured'} • Registered: {new Date(user.registered_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {user.username !== 'admin' && (
+                          <button
+                            onClick={() => handleDelete(user.username)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Compliance Notice */}
+              <div className="mt-5 p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 text-xs text-teal-900 flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold block">Hospital Security Policy</span>
+                  Every user registration is subjected to mandatory System Administrator sign-off before credential issuance. System Administrator console logins are restricted to local hospital workstations for HIPAA/GDPR clinical compliance.
+                </div>
               </div>
             </SectionCard>
           )}

@@ -254,3 +254,9 @@ class AlertEngine:
         else:
             compression_ratio = 0.0
         return total_raw, total_episodes, max(0.0, compression_ratio)
+
+    def clear_alerts(self):
+        """Clears all active and historical alerts."""
+        self.active_episodes.clear()
+        self.resolved_episodes.clear()
+        self.raw_observations_count = 0
