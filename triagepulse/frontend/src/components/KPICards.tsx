@@ -13,8 +13,8 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpis }) => {
       value: kpis ? kpis.total_patients : '12',
       subtext: 'Monitored beds',
       icon: Users,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10 border-blue-500/20',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-500/10 border-emerald-500/20',
     },
     {
       title: 'High Attention',
@@ -64,16 +64,16 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpis }) => {
       value: kpis ? `${kpis.available_capacity_slots} slots` : '6 slots',
       subtext: 'Safe triage margin',
       icon: ShieldAlert,
-      color: 'text-cyan-400',
-      bgColor: 'bg-cyan-500/10 border-cyan-500/20',
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-500/10 border-teal-500/20',
     },
     {
       title: 'IV Tasks',
       value: kpis ? kpis.iv_tasks_count : '2',
       subtext: 'Near-empty / Flow watch',
       icon: Droplets,
-      color: 'text-indigo-400',
-      bgColor: 'bg-indigo-500/10 border-indigo-500/20',
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-500/10 border-violet-500/20',
     },
   ];
 
@@ -84,21 +84,21 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpis }) => {
         return (
           <div
             key={i}
-            className={`p-3 rounded-xl border backdrop-blur-sm transition-all duration-200 hover:border-slate-600 ${card.bgColor}`}
+            className={`p-3 rounded-xl border backdrop-blur-sm transition-all duration-200 hover:border-slate-400 ${card.bgColor}`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider leading-tight">{card.title}</span>
+              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider leading-tight">{card.title}</span>
               <Icon className={`w-3.5 h-3.5 ${card.color}`} />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-xl font-bold tracking-tight text-white">{card.value}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900">{card.value}</span>
               {card.badge && (
                 <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 leading-none">
                   {card.badge}
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 mt-1 truncate">{card.subtext}</p>
+            <p className="text-[10px] text-slate-500 mt-1 truncate">{card.subtext}</p>
           </div>
         );
       })}

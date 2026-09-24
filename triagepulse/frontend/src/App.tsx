@@ -81,25 +81,25 @@ export const App: React.FC = () => {
   // Show Admin Panel if logged in as admin
   if (loggedInRole === 'admin') {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
         <SafetyBanner />
-        <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 </div>
                 <div>
-                  <span className="text-base font-bold text-white">TriagePulse</span>
-                  <span className="text-xs text-slate-400 ml-2">System Administration</span>
+                  <span className="text-base font-bold text-slate-900">TriagePulse</span>
+                  <span className="text-xs text-slate-500 ml-2">System Administration</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-400">Signed in as <strong className="text-rose-300">{loggedInUser.name}</strong></span>
+                <span className="text-[11px] text-slate-500">Signed in as <strong className="text-rose-300">{loggedInUser.name}</strong></span>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition-all"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-all"
                 >
                   Sign Out
                 </button>
@@ -110,9 +110,9 @@ export const App: React.FC = () => {
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <AdminPanelPage onLogout={handleLogout} />
         </main>
-        <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
+        <footer className="border-t border-slate-900 bg-slate-50 py-4 px-6 text-center text-xs text-slate-500">
           <p>
-            <span className="font-semibold text-slate-400">TriagePulse</span> — System Administration Console
+            <span className="font-semibold text-slate-500">TriagePulse</span> — System Administration Console
           </p>
           <p className="text-[11px] text-slate-600 mt-1">
             Educational / Research Prototype Only • Not for Clinical Diagnosis, Medical Prescription, or Autonomous Equipment Control.
@@ -123,7 +123,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
       {/* Top Prominent Safety Disclaimer */}
       <SafetyBanner />
 
@@ -242,9 +242,9 @@ export const App: React.FC = () => {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-900 bg-slate-50 py-4 px-6 text-center text-xs text-slate-500">
         <p>
-          <span className="font-semibold text-slate-400">TriagePulse</span> — Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage.
+          <span className="font-semibold text-slate-500">TriagePulse</span> — Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage.
         </p>
         <p className="text-[11px] text-slate-600 mt-1">
           Educational / Research Prototype Only • Not for Clinical Diagnosis, Medical Prescription, or Autonomous Equipment Control.

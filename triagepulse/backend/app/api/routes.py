@@ -308,16 +308,19 @@ def get_management_overview():
     for p in patients:
         mins = p.current_iv.estimated_time_to_empty_min
         rem = p.current_iv.iv_remaining_ml
-        if mins < 180 or rem < 150:
-            urgency = "URGENT" if mins < 30 else ("SOON" if mins < 60 else "MONITOR")
-            depletion_forecast.append({
-                "patient_id": p.patient_id,
-                "name": p.name,
-                "room": p.room,
-                "remaining_ml": round(rem, 1),
-                "flow_ml_hr": p.current_iv.iv_flow,
-                "eta_minutes": round(mins, 1),
-                "urgency": urgency
+        
+        # Handle cases where mins could be None (e.g. flow is 0)
+        if mins is not None and rem is not None:
+            if mins < 180 or rem < 150:
+                urgency = "URGENT" if mins < 30 else ("SOON" if mins < 60 else "MONITOR")
+                depletion_forecast.append({
+                    "patient_id": p.patient_id,
+                    "name": p.name,
+                    "room": p.room,
+                    "remaining_ml": round(rem, 1),
+                    "flow_ml_hr": p.current_iv.iv_flow,
+                    "eta_minutes": round(mins, 1),
+                    "urgency": urgency
             })
     depletion_forecast.sort(key=lambda x: x["eta_minutes"])
     

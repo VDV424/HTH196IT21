@@ -24,7 +24,7 @@ export const AnalyticsPage: React.FC = () => {
   }, []);
 
   if (loading || !data) {
-    return <div className="text-slate-400 p-8 text-center text-sm">Loading telemetry metrics...</div>;
+    return <div className="text-slate-500 p-8 text-center text-sm">Loading telemetry metrics...</div>;
   }
 
   const kpis = data.kpis;
@@ -35,13 +35,13 @@ export const AnalyticsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Title */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-teal-600" />
             Healthcare IoT Telemetry & Workflow Analytics
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Real-time evaluation of alert fatigue reduction, nurse capacity utilization, and trajectory lead-time detection.
           </p>
         </div>
@@ -49,55 +49,55 @@ export const AnalyticsPage: React.FC = () => {
 
       {/* Analytics KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">
+        <div className="p-4 rounded-xl bg-white border border-slate-200">
+          <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
             Alert Compression Ratio
           </span>
           <span className="text-2xl font-bold font-mono text-emerald-400 mt-1 block">
             {kpis.alert_compression_ratio}%
           </span>
-          <p className="text-[11px] text-slate-400 mt-1">Alarm fatigue suppression</p>
+          <p className="text-[11px] text-slate-500 mt-1">Alarm fatigue suppression</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">
+        <div className="p-4 rounded-xl bg-white border border-slate-200">
+          <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
             Avg Acknowledgement Time
           </span>
-          <span className="text-2xl font-bold font-mono text-cyan-400 mt-1 block">
+          <span className="text-2xl font-bold font-mono text-teal-600 mt-1 block">
             {kpis.avg_acknowledgement_latency_sec}s
           </span>
-          <p className="text-[11px] text-slate-400 mt-1">Target: &lt; 30 seconds</p>
+          <p className="text-[11px] text-slate-500 mt-1">Target: &lt; 30 seconds</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">
+        <div className="p-4 rounded-xl bg-white border border-slate-200">
+          <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
             Early Detection Lead-Time
           </span>
-          <span className="text-2xl font-bold font-mono text-blue-400 mt-1 block">
+          <span className="text-2xl font-bold font-mono text-emerald-600 mt-1 block">
             {data.detection_lead_time_minutes} min
           </span>
-          <p className="text-[11px] text-slate-400 mt-1">Ahead of static threshold failure</p>
+          <p className="text-[11px] text-slate-500 mt-1">Ahead of static threshold failure</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">
+        <div className="p-4 rounded-xl bg-white border border-slate-200">
+          <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider block">
             IV Event Capture Rate
           </span>
-          <span className="text-2xl font-bold font-mono text-indigo-400 mt-1 block">
+          <span className="text-2xl font-bold font-mono text-violet-600 mt-1 block">
             {data.iv_event_detection_rate}%
           </span>
-          <p className="text-[11px] text-slate-400 mt-1">Near-empty & no-flow vigilance</p>
+          <p className="text-[11px] text-slate-500 mt-1">Near-empty & no-flow vigilance</p>
         </div>
       </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Nurse Workload Utilization Chart */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">
             Nurse Staff Workload & Capacity Utilization
           </h3>
-          <p className="text-xs text-slate-400 mb-4">Patient bed count vs capacity ceiling (5 beds/nurse)</p>
+          <p className="text-xs text-slate-500 mb-4">Patient bed count vs capacity ceiling (5 beds/nurse)</p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.nurse_workload}>
@@ -113,11 +113,11 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Alert Episodes by Category Chart */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">
             Alert Episodes by Clinical / Care Category
           </h3>
-          <p className="text-xs text-slate-400 mb-4">Breakdown of physiological vs technical vs IV tasks</p>
+          <p className="text-xs text-slate-500 mb-4">Breakdown of physiological vs technical vs IV tasks</p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.alert_distribution} layout="vertical">
@@ -132,11 +132,11 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Patient Attention Priority Tiers */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md lg:col-span-2">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md lg:col-span-2">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">
             Patient Bed Population by Priority Tier
           </h3>
-          <p className="text-xs text-slate-400 mb-4">Distribution across continuous triage bands</p>
+          <p className="text-xs text-slate-500 mb-4">Distribution across continuous triage bands</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.priority_distribution}>

@@ -82,21 +82,21 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
   return (
     <div className="space-y-6">
       {/* Management Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-blue-500/10 to-transparent pointer-events-none" />
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+            <div className="h-12 w-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600">
               <Building2 className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white tracking-tight">Hospital Operations & Ward Executive</h1>
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-950 text-blue-300 border border-blue-800">
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">Hospital Operations & Ward Executive</h1>
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-blue-300 border border-emerald-200">
                   Ward 4B Command
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Ward capacity forecasting, nurse burnout prevention, alarm fatigue suppression audit, and pharmacy supply logistics.
               </p>
             </div>
@@ -106,7 +106,7 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
             <button
               onClick={handleRequestPharmacyBatch}
               disabled={restockSent}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md shadow-blue-600/20 flex items-center gap-2"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-900 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-2"
             >
               <Droplet className="w-3.5 h-3.5" />
               <span>{restockSent ? 'Pharmacy Requisition Sent!' : 'Pre-order Pharmacy IV Batch'}</span>
@@ -115,21 +115,21 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
         </div>
 
         {/* 4 High-Level Executive KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-800/80">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-200/80">
           {/* Bed Occupancy */}
-          <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800">
-            <span className="text-[11px] font-medium text-slate-400">Ward Bed Occupancy</span>
+          <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
+            <span className="text-[11px] font-medium text-slate-500">Ward Bed Occupancy</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-bold font-mono text-white">
+              <span className="text-xl font-bold font-mono text-slate-900">
                 {bedOccupancy.occupied} / {bedOccupancy.total_beds}
               </span>
-              <span className="text-[10px] text-blue-400 font-semibold">{bedOccupancy.occupancy_rate_pct}% Cap.</span>
+              <span className="text-[10px] text-emerald-600 font-semibold">{bedOccupancy.occupancy_rate_pct}% Cap.</span>
             </div>
           </div>
 
           {/* Burnout Risk */}
-          <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800">
-            <span className="text-[11px] font-medium text-slate-400">Nurse Burnout Risk</span>
+          <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
+            <span className="text-[11px] font-medium text-slate-500">Nurse Burnout Risk</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className={`text-xl font-bold font-mono ${
                 burnout.risk_level === 'HIGH' ? 'text-rose-400' : burnout.risk_level === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400'
@@ -141,8 +141,8 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
           </div>
 
           {/* Alarm Fatigue Noise Reduction */}
-          <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800">
-            <span className="text-[11px] font-medium text-slate-400">Noise Suppression Rate</span>
+          <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
+            <span className="text-[11px] font-medium text-slate-500">Noise Suppression Rate</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xl font-bold font-mono text-emerald-400">
                 {fatigue.noise_suppression_pct}%
@@ -152,10 +152,10 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
           </div>
 
           {/* Response SLA */}
-          <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-800">
-            <span className="text-[11px] font-medium text-slate-400">Emergency Response SLA</span>
+          <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200">
+            <span className="text-[11px] font-medium text-slate-500">Emergency Response SLA</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xl font-bold font-mono text-cyan-400">98.4%</span>
+              <span className="text-xl font-bold font-mono text-teal-600">98.4%</span>
               <span className="text-[10px] text-slate-500">&lt;60s ack time</span>
             </div>
           </div>
@@ -167,19 +167,19 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
         {/* Left 2 Cols: Ward Capacity Heatmap & Nurse Workload Distribution */}
         <div className="lg:col-span-2 space-y-6">
           {/* Ward Bed Heatmap */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Bed className="w-4 h-4 text-blue-400" />
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Bed className="w-4 h-4 text-emerald-600" />
                   <span>Ward Bed Acuity & Occupancy Matrix (20 Beds)</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Color-coded by continuous physiological trajectory acuity level. Click any bed to inspect telemetry.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Critical
                 </span>
@@ -190,7 +190,7 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Stable
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-700" /> Empty
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Empty
                 </span>
               </div>
             </div>
@@ -205,7 +205,7 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
                   return (
                     <div
                       key={roomNum}
-                      className="p-3 rounded-2xl bg-slate-950/60 border border-dashed border-slate-800 text-center text-slate-600 text-xs"
+                      className="p-3 rounded-2xl bg-slate-50/60 border border-dashed border-slate-200 text-center text-slate-600 text-xs"
                     >
                       <span className="text-[10px] block font-mono text-slate-500">{roomNum}</span>
                       <span className="text-[10px] italic mt-1 block">Vacant</span>
@@ -226,7 +226,7 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
                         ? 'bg-rose-950/60 border-rose-600 text-rose-200'
                         : isHigh
                         ? 'bg-amber-950/50 border-amber-600 text-amber-200'
-                        : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-200'
+                        : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between text-[10px] font-mono">
@@ -237,8 +237,8 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
                         }`}
                       />
                     </div>
-                    <span className="font-bold text-xs truncate block text-white mt-1">{patient.name}</span>
-                    <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                    <span className="font-bold text-xs truncate block text-slate-900 mt-1">{patient.name}</span>
+                    <span className="text-[10px] text-slate-500 block truncate mt-0.5">
                       Pri: {patient.trajectory.attention_priority.toFixed(0)} • {patient.assigned_nurse_name || 'Nurse'}
                     </span>
                   </div>
@@ -248,14 +248,14 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
           </div>
 
           {/* Nurse Staffing & Workload Balance */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-emerald-400" />
                   <span>Nurse Workload Equity & Burnout Monitor</span>
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Real-time acuity-adjusted assignment balance among active shift staff.
                 </p>
               </div>
@@ -268,21 +268,21 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
 
             <div className="space-y-3">
               {nurses.map((nurse) => (
-                <div key={nurse.nurse_id} className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <div key={nurse.nurse_id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <div>
-                      <strong className="text-white">{nurse.name}</strong>
-                      <span className="text-slate-400 ml-2">({nurse.role})</span>
+                      <strong className="text-slate-900">{nurse.name}</strong>
+                      <span className="text-slate-500 ml-2">({nurse.role})</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-bold text-white">
+                      <span className="font-mono font-bold text-slate-900">
                         {nurse.assigned_count} / {nurse.max_capacity} Patients
                       </span>
-                      <span className="text-[11px] text-slate-400 ml-2">({nurse.workload_percent.toFixed(0)}% Load)</span>
+                      <span className="text-[11px] text-slate-500 ml-2">({nurse.workload_percent.toFixed(0)}% Load)</span>
                     </div>
                   </div>
 
-                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
                         nurse.workload_percent >= 80 ? 'bg-rose-500' : nurse.workload_percent >= 60 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -299,21 +299,21 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
         {/* Right Col: IV Depletion Timeline & Alarm Fatigue Compression */}
         <div className="space-y-6">
           {/* IV Supply & Pharmacy Depletion Timeline */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Droplet className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Droplet className="w-4 h-4 text-teal-600" />
                 <span>Pharmacy IV Depletion Schedule</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-mono">Next 3 Hours</span>
+              <span className="text-[10px] text-slate-500 font-mono">Next 3 Hours</span>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Predicted runout times across all active infusions to optimize pharmacy preparation and prevent dry lines.
             </p>
 
             {ivForecast.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
                 <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-80" />
                 <p>All IV bags have &gt; 3 hours remaining capacity.</p>
               </div>
@@ -331,25 +331,25 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
                           ? 'bg-rose-950/40 border-rose-700/80 shadow-md'
                           : isSoon
                           ? 'bg-amber-950/30 border-amber-700/60'
-                          : 'bg-slate-950 border-slate-800'
+                          : 'bg-slate-50 border-slate-200'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-white">{item.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{item.room}</span>
+                        <span className="font-bold text-xs text-slate-900">{item.name}</span>
+                        <span className="text-[10px] font-mono text-slate-500">{item.room}</span>
                       </div>
 
                       <div className="flex items-center justify-between text-xs mt-1.5">
-                        <span className="text-slate-400">Vol: {item.remaining_ml.toFixed(0)} ml</span>
-                        <span className={`font-bold font-mono ${isUrgent ? 'text-rose-400 animate-pulse' : 'text-slate-200'}`}>
+                        <span className="text-slate-500">Vol: {item.remaining_ml.toFixed(0)} ml</span>
+                        <span className={`font-bold font-mono ${isUrgent ? 'text-rose-400 animate-pulse' : 'text-slate-700'}`}>
                           Empty in ~{item.eta_minutes.toFixed(0)} min
                         </span>
                       </div>
 
-                      <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/80">
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-200/80">
                         <span>Rate: {item.flow_ml_hr.toFixed(0)} ml/hr</span>
                         <span className={`px-1.5 py-0.2 rounded font-bold ${
-                          isUrgent ? 'bg-rose-600 text-white' : isSoon ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-300'
+                          isUrgent ? 'bg-rose-600 text-slate-900' : isSoon ? 'bg-amber-600 text-slate-900' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {item.urgency}
                         </span>
@@ -362,35 +362,35 @@ export const ManagementDashboardPage: React.FC<ManagementDashboardPageProps> = (
           </div>
 
           {/* Alarm Fatigue Compression Audit Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Alarm Fatigue Reduction Audit</span>
             </h3>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Raw IoT Samples Processed</span>
-                <span className="font-mono font-bold text-white">{fatigue.raw_ticks_processed.toLocaleString()}</span>
+                <span className="text-slate-500">Raw IoT Samples Processed</span>
+                <span className="font-mono font-bold text-slate-900">{fatigue.raw_ticks_processed.toLocaleString()}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Clinically Actionable Episodes</span>
-                <span className="font-mono font-bold text-cyan-400">{fatigue.clinical_episodes_generated}</span>
+                <span className="text-slate-500">Clinically Actionable Episodes</span>
+                <span className="font-mono font-bold text-teal-600">{fatigue.clinical_episodes_generated}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Artifact & Noise Suppression</span>
+                <span className="text-slate-500">Artifact & Noise Suppression</span>
                 <span className="font-mono font-bold text-emerald-400">{fatigue.noise_suppression_pct}%</span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Compression Factor</span>
-                <span className="font-mono font-bold text-indigo-400">{fatigue.compression_ratio.toFixed(0)}x</span>
+                <span className="text-slate-500">Compression Factor</span>
+                <span className="font-mono font-bold text-violet-600">{fatigue.compression_ratio.toFixed(0)}x</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               ✅ <strong>Clinical Impact:</strong> Trajectory persistence and signal confidence filtering eliminate nuisance threshold crossing alarms, saving nursing staff ~2.4 hours of alert cognitive load per shift.
             </p>
           </div>

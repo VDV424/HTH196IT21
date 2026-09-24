@@ -150,32 +150,32 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
   ];
 
   const colorMap: Record<string, string> = {
-    cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-800',
+    cyan: 'text-teal-600 bg-teal-500/10 border-teal-200',
     purple: 'text-purple-400 bg-purple-500/10 border-purple-800',
     teal: 'text-teal-400 bg-teal-500/10 border-teal-800',
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-800',
+    blue: 'text-emerald-600 bg-emerald-500/10 border-emerald-200',
     amber: 'text-amber-400 bg-amber-500/10 border-amber-800',
     emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-800',
-    indigo: 'text-indigo-400 bg-indigo-500/10 border-indigo-800',
+    indigo: 'text-violet-600 bg-violet-500/10 border-violet-200',
     rose: 'text-rose-400 bg-rose-500/10 border-rose-800',
   };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Admin Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 border border-slate-200 rounded-2xl p-5 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-600 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/20">
-            <Shield className="w-6 h-6 text-white" />
+            <Shield className="w-6 h-6 text-slate-900" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white">System Administration</h1>
+              <h1 className="text-lg font-bold text-slate-900">System Administration</h1>
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-950 text-rose-300 border border-rose-800">
                 Admin Only
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Complete control over hospital branding, ward setup, IoT hardware, alert policies, and system personalization.
             </p>
           </div>
@@ -189,14 +189,14 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
           )}
           <button
             onClick={handleReset}
-            className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-950 text-slate-300 border border-slate-800 hover:bg-slate-800 transition-all flex items-center gap-1.5"
+            className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 transition-all flex items-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset
           </button>
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20 hover:shadow-lg transition-all flex items-center gap-1.5 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-teal-600 to-emerald-600 text-slate-900 shadow-md shadow-teal-500/20 hover:shadow-lg transition-all flex items-center gap-1.5 disabled:opacity-50"
           >
             {saveStatus === 'saving' ? (
               <>
@@ -220,7 +220,7 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Sidebar: Navigation */}
-        <div className="space-y-1.5 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 h-fit shadow-lg">
+        <div className="space-y-1.5 bg-white/60 border border-slate-200 rounded-2xl p-4 h-fit shadow-lg">
           <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider px-2 pb-2">Sections</p>
           {sections.map((s) => {
             const SIcon = s.icon;
@@ -231,18 +231,18 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
                 onClick={() => setActiveSection(s.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
-                    ? `bg-slate-800 text-white shadow-sm`
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    ? `bg-slate-100 text-slate-900 shadow-sm`
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/60'
                 }`}
               >
-                <SIcon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
+                <SIcon className={`w-4 h-4 ${isActive ? 'text-teal-600' : 'text-slate-500'}`} />
                 <span className="flex-1 text-left">{s.label}</span>
                 {isActive && <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
               </button>
             );
           })}
 
-          <div className="pt-4 mt-4 border-t border-slate-800">
+          <div className="pt-4 mt-4 border-t border-slate-200">
             <button
               onClick={onLogout}
               className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/60 transition-all flex items-center gap-2"
@@ -264,15 +264,15 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
                 <InputField label="Ward Name" value={config.wardName} onChange={(v) => updateConfig('wardName', v)} />
                 <InputField label="Floor / Location" value={config.floorNumber} onChange={(v) => updateConfig('floorNumber', v)} />
               </div>
-              <div className="mt-5 p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80">
-                <h4 className="text-xs font-bold text-slate-400 mb-2">Preview — Header Bar</h4>
-                <div className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center">
-                    <Activity className="h-5 w-5 text-white" />
+              <div className="mt-5 p-4 rounded-2xl bg-slate-50/60 border border-slate-200/80">
+                <h4 className="text-xs font-bold text-slate-500 mb-2">Preview — Header Bar</h4>
+                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center">
+                    <Activity className="h-5 w-5 text-slate-900" />
                   </div>
                   <div>
-                    <span className="text-sm font-bold text-white">{config.logoText}</span>
-                    <p className="text-[10px] text-slate-400">{config.wardName} • {config.department}</p>
+                    <span className="text-sm font-bold text-slate-900">{config.logoText}</span>
+                    <p className="text-[10px] text-slate-500">{config.wardName} • {config.department}</p>
                   </div>
                 </div>
               </div>
@@ -288,32 +288,32 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
                   <label className="text-[11px] text-slate-500 uppercase font-bold tracking-wider block mb-1.5">Primary Color</label>
                   <div className="flex items-center gap-3">
                     <input type="color" value={config.primaryColor} onChange={(e) => updateConfig('primaryColor', e.target.value)}
-                      className="w-10 h-10 rounded-xl border border-slate-700 cursor-pointer bg-transparent" />
-                    <span className="text-xs text-slate-300 font-mono">{config.primaryColor}</span>
+                      className="w-10 h-10 rounded-xl border border-slate-300 cursor-pointer bg-transparent" />
+                    <span className="text-xs text-slate-600 font-mono">{config.primaryColor}</span>
                   </div>
                 </div>
                 <div>
                   <label className="text-[11px] text-slate-500 uppercase font-bold tracking-wider block mb-1.5">Accent Color</label>
                   <div className="flex items-center gap-3">
                     <input type="color" value={config.accentColor} onChange={(e) => updateConfig('accentColor', e.target.value)}
-                      className="w-10 h-10 rounded-xl border border-slate-700 cursor-pointer bg-transparent" />
-                    <span className="text-xs text-slate-300 font-mono">{config.accentColor}</span>
+                      className="w-10 h-10 rounded-xl border border-slate-300 cursor-pointer bg-transparent" />
+                    <span className="text-xs text-slate-600 font-mono">{config.accentColor}</span>
                   </div>
                 </div>
               </div>
               {/* Color Preview */}
               <div className="mt-5 grid grid-cols-3 gap-3">
-                <div className="p-4 rounded-2xl border border-slate-800" style={{ background: config.primaryColor + '20' }}>
+                <div className="p-4 rounded-2xl border border-slate-200" style={{ background: config.primaryColor + '20' }}>
                   <div className="h-6 w-full rounded-lg mb-2" style={{ background: config.primaryColor }} />
-                  <span className="text-[10px] text-slate-400">Primary</span>
+                  <span className="text-[10px] text-slate-500">Primary</span>
                 </div>
-                <div className="p-4 rounded-2xl border border-slate-800" style={{ background: config.accentColor + '20' }}>
+                <div className="p-4 rounded-2xl border border-slate-200" style={{ background: config.accentColor + '20' }}>
                   <div className="h-6 w-full rounded-lg mb-2" style={{ background: config.accentColor }} />
-                  <span className="text-[10px] text-slate-400">Accent</span>
+                  <span className="text-[10px] text-slate-500">Accent</span>
                 </div>
-                <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/60">
-                  <div className="h-6 w-full rounded-lg mb-2 bg-slate-800" />
-                  <span className="text-[10px] text-slate-400">Background</span>
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60">
+                  <div className="h-6 w-full rounded-lg mb-2 bg-slate-100" />
+                  <span className="text-[10px] text-slate-500">Background</span>
                 </div>
               </div>
             </SectionCard>
@@ -344,10 +344,10 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
               </div>
               <div className="mt-5 grid grid-cols-3 gap-3">
                 {Array.from({ length: config.esp32Count }, (_, i) => (
-                  <div key={i} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
+                  <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
                     <div>
-                      <span className="text-[11px] font-bold text-white block">ESP32-{String(i + 1).padStart(2, '0')}</span>
+                      <span className="text-[11px] font-bold text-slate-900 block">ESP32-{String(i + 1).padStart(2, '0')}</span>
                       <span className="text-[9px] text-slate-500">Patient P{String(i + 1).padStart(2, '0')} bound</span>
                     </div>
                   </div>
@@ -414,21 +414,21 @@ export const AdminPanelPage: React.FC<AdminPanelPageProps> = ({ onLogout }) => {
                   { name: 'Dr. Michael Vance', id: 'D01', role: 'Attending Physician', status: 'Active', ward: '4B' },
                   { name: 'Dr. Sarah Chen', id: 'D02', role: 'Resident', status: 'Off-Shift', ward: '4B' },
                 ].map((staff) => (
-                  <div key={staff.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all">
+                  <div key={staff.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all">
                     <div className="flex items-center gap-3">
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-sm ${
-                        staff.id.startsWith('D') ? 'bg-gradient-to-br from-indigo-500 to-blue-600' : 'bg-gradient-to-br from-teal-500 to-emerald-600'
+                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-slate-900 font-bold text-xs shadow-sm ${
+                        staff.id.startsWith('D') ? 'bg-gradient-to-br from-violet-500 to-emerald-600' : 'bg-gradient-to-br from-teal-500 to-emerald-600'
                       }`}>
                         {staff.name[0]}
                       </div>
                       <div>
-                        <span className="text-xs font-bold text-white">{staff.name}</span>
-                        <span className="text-[10px] text-slate-400 block">{staff.role} • {staff.id}</span>
+                        <span className="text-xs font-bold text-slate-900">{staff.name}</span>
+                        <span className="text-[10px] text-slate-500 block">{staff.role} • {staff.id}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        staff.status === 'Active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        staff.status === 'Active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-100 text-slate-500 border border-slate-300'
                       }`}>
                         {staff.status}
                       </span>
@@ -459,27 +459,27 @@ const SectionCard: React.FC<{
   children: React.ReactNode;
 }> = ({ title, icon: Icon, color, description, children }) => {
   const colorClasses: Record<string, string> = {
-    cyan: 'from-cyan-600 to-blue-500 shadow-cyan-500/20',
+    cyan: 'from-teal-600 to-emerald-500 shadow-teal-500/20',
     purple: 'from-purple-600 to-pink-500 shadow-purple-500/20',
     teal: 'from-teal-600 to-emerald-500 shadow-teal-500/20',
-    blue: 'from-blue-600 to-sky-500 shadow-blue-500/20',
+    blue: 'from-emerald-600 to-emerald-500 shadow-emerald-500/20',
     amber: 'from-amber-600 to-orange-500 shadow-amber-500/20',
     emerald: 'from-emerald-600 to-green-500 shadow-emerald-500/20',
-    indigo: 'from-indigo-600 to-violet-500 shadow-indigo-500/20',
+    indigo: 'from-violet-600 to-violet-500 shadow-violet-500/20',
     rose: 'from-rose-600 to-pink-500 shadow-rose-500/20',
   };
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl shadow-lg overflow-hidden">
+    <div className="bg-white/80 border border-slate-200 rounded-2xl shadow-lg overflow-hidden">
       <div className={`h-1 bg-gradient-to-r ${colorClasses[color]}`} />
       <div className="p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${colorClasses[color]} flex items-center justify-center shadow-md`}>
-            <Icon className="w-5 h-5 text-white" />
+            <Icon className="w-5 h-5 text-slate-900" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white">{title}</h2>
-            <p className="text-xs text-slate-400">{description}</p>
+            <h2 className="text-base font-bold text-slate-900">{title}</h2>
+            <p className="text-xs text-slate-500">{description}</p>
           </div>
         </div>
         {children}
@@ -495,7 +495,7 @@ const InputField: React.FC<{ label: string; value: string; onChange: (v: string)
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-600 transition-colors"
+      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-teal-600 transition-colors"
     />
   </div>
 );
@@ -512,7 +512,7 @@ const NumberField: React.FC<{ label: string; value: number; onChange: (v: number
       min={min}
       max={max}
       step={step}
-      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono focus:outline-none focus:border-cyan-600 transition-colors"
+      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:border-teal-600 transition-colors"
     />
   </div>
 );
@@ -520,15 +520,15 @@ const NumberField: React.FC<{ label: string; value: number; onChange: (v: number
 const ToggleField: React.FC<{ label: string; description: string; value: boolean; onChange: (v: boolean) => void }> = ({
   label, description, value, onChange
 }) => (
-  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
     <div>
-      <span className="text-xs font-bold text-white">{label}</span>
-      <span className="text-[10px] text-slate-400 block">{description}</span>
+      <span className="text-xs font-bold text-slate-900">{label}</span>
+      <span className="text-[10px] text-slate-500 block">{description}</span>
     </div>
     <button
       onClick={() => onChange(!value)}
       className={`w-12 h-6 rounded-full transition-all relative ${
-        value ? 'bg-cyan-600' : 'bg-slate-700'
+        value ? 'bg-teal-600' : 'bg-slate-200'
       }`}
     >
       <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all ${

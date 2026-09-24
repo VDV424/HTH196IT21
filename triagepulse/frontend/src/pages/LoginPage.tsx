@@ -42,8 +42,8 @@ const roleConfig: Record<LoginRole, {
     label: 'Nurse Station',
     icon: User,
     color: 'cyan',
-    gradient: 'from-cyan-600 to-blue-500',
-    shadow: 'shadow-cyan-500/20',
+    gradient: 'from-teal-600 to-emerald-500',
+    shadow: 'shadow-teal-500/20',
     description: 'Triage command, patient monitoring & task dispatch',
     defaultUser: 'Charge Nurse',
     defaultId: 'N01',
@@ -52,8 +52,8 @@ const roleConfig: Record<LoginRole, {
     label: 'Physician Console',
     icon: Stethoscope,
     color: 'indigo',
-    gradient: 'from-indigo-600 to-purple-500',
-    shadow: 'shadow-indigo-500/20',
+    gradient: 'from-violet-600 to-purple-500',
+    shadow: 'shadow-violet-500/20',
     description: 'Clinical escalations, deterioration forensics & SBAR reviews',
     defaultUser: 'Dr. Michael Vance',
     defaultId: 'D01',
@@ -72,8 +72,8 @@ const roleConfig: Record<LoginRole, {
     label: 'Operations Hub',
     icon: Building2,
     color: 'blue',
-    gradient: 'from-blue-600 to-sky-500',
-    shadow: 'shadow-blue-500/20',
+    gradient: 'from-emerald-600 to-emerald-500',
+    shadow: 'shadow-emerald-500/20',
     description: 'Bed capacity, burnout risk, alarm fatigue audit & SLA tracking',
     defaultUser: 'Admin',
     defaultId: 'M01',
@@ -109,6 +109,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Security Restriction: Admin login is only allowed on the physical server (localhost)
+    if (selectedRole === 'admin') {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalhost) {
+        alert("SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.");
+        return;
+      }
+    }
+
     setIsLoggingIn(true);
 
     // Simulate authentication delay for polish
@@ -121,6 +131,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
   };
 
   const handleQuickLogin = async (role: LoginRole) => {
+    if (role === 'admin') {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalhost) {
+        alert("SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.");
+        return;
+      }
+    }
+
     const c = roleConfig[role];
     setSelectedRole(role);
     setIsLoggingIn(true);
@@ -129,12 +147,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-600/8 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/8 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite alternate' }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-600/8 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-600/8 rounded-full blur-3xl" style={{ animation: 'pulse 4s ease-in-out infinite alternate' }} />
         <div className="absolute top-3/4 left-1/2 w-72 h-72 bg-teal-600/6 rounded-full blur-3xl" style={{ animation: 'pulse 6s ease-in-out infinite alternate-reverse' }} />
 
         {/* Grid Pattern */}
@@ -160,12 +178,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
         {/* Header Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-xl shadow-cyan-500/20">
-              <Activity className="h-7 w-7 text-white" />
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-xl shadow-teal-500/20">
+              <Activity className="h-7 w-7 text-slate-900" />
             </div>
             <div className="text-left">
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">TriagePulse</h1>
-              <p className="text-xs text-slate-400 tracking-wider">Trajectory-Aware Smart Hospital Platform</p>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">TriagePulse</h1>
+              <p className="text-xs text-slate-500 tracking-wider">Trajectory-Aware Smart Hospital Platform</p>
             </div>
           </div>
           <p className="text-sm text-slate-500 max-w-sm mx-auto">
@@ -174,7 +192,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
         </div>
 
         {/* Login Card */}
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl shadow-2xl overflow-hidden">
           {/* Role Indicator Bar */}
           <div className={`h-1.5 bg-gradient-to-r ${config.gradient}`} />
 
@@ -188,24 +206,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                 <button
                   type="button"
                   onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                  className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border bg-slate-950/80 hover:bg-slate-950 transition-all ${
-                    showRoleDropdown ? 'border-cyan-600' : 'border-slate-800'
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl border bg-slate-50/80 hover:bg-slate-50 transition-all ${
+                    showRoleDropdown ? 'border-teal-600' : 'border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-md ${config.shadow}`}>
-                      <Icon className="w-5 h-5 text-white" />
+                      <Icon className="w-5 h-5 text-slate-900" />
                     </div>
                     <div className="text-left">
-                      <span className="text-sm font-bold text-white block">{config.label}</span>
-                      <span className="text-[11px] text-slate-400">{config.description}</span>
+                      <span className="text-sm font-bold text-slate-900 block">{config.label}</span>
+                      <span className="text-[11px] text-slate-500">{config.description}</span>
                     </div>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showRoleDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden">
                     {(Object.entries(roleConfig) as [LoginRole, typeof config][]).map(([role, cfg]) => {
                       const RoleIcon = cfg.icon;
                       return (
@@ -215,19 +233,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                             setSelectedRole(role);
                             setShowRoleDropdown(false);
                           }}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:bg-slate-800/80 ${
-                            selectedRole === role ? 'bg-slate-800/60' : ''
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:bg-slate-100/80 ${
+                            selectedRole === role ? 'bg-slate-100/60' : ''
                           }`}
                         >
                           <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shadow-sm ${cfg.shadow}`}>
-                            <RoleIcon className="w-4 h-4 text-white" />
+                            <RoleIcon className="w-4 h-4 text-slate-900" />
                           </div>
                           <div>
-                            <span className="text-xs font-bold text-white block">{cfg.label}</span>
+                            <span className="text-xs font-bold text-slate-900 block">{cfg.label}</span>
                             <span className="text-[10px] text-slate-500">{cfg.description}</span>
                           </div>
                           {selectedRole === role && (
-                            <div className="ml-auto w-2 h-2 rounded-full bg-cyan-400" />
+                            <div className="ml-auto w-2 h-2 rounded-full bg-teal-600" />
                           )}
                         </button>
                       );
@@ -251,7 +269,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder={config.defaultUser}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-600 transition-colors"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-600 focus:outline-none focus:border-teal-600 transition-colors"
                   />
                 </div>
               </div>
@@ -268,12 +286,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••"
-                    className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-600 transition-colors"
+                    className="w-full pl-10 pr-11 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-600 focus:outline-none focus:border-teal-600 transition-colors"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -284,7 +302,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className={`w-full py-3.5 rounded-xl bg-gradient-to-r ${config.gradient} text-white font-bold text-sm uppercase tracking-wider shadow-lg ${config.shadow} hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed`}
+                className={`w-full py-3.5 rounded-xl bg-gradient-to-r ${config.gradient} text-slate-900 font-bold text-sm uppercase tracking-wider shadow-lg ${config.shadow} hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed`}
               >
                 {isLoggingIn ? (
                   <>
@@ -301,7 +319,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
             </form>
 
             {/* Quick Login Shortcuts */}
-            <div className="mt-6 pt-6 border-t border-slate-800/60">
+            <div className="mt-6 pt-6 border-t border-slate-200/60">
               <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-3 text-center">
                 Quick Demo Access
               </p>
@@ -315,12 +333,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
                       disabled={isLoggingIn}
                       className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
                         selectedRole === role
-                          ? `bg-slate-800/80 border-slate-700`
-                          : 'bg-slate-950/60 border-slate-800/60 hover:border-slate-700'
+                          ? `bg-slate-100/80 border-slate-300`
+                          : 'bg-slate-50/60 border-slate-200/60 hover:border-slate-300'
                       }`}
                     >
-                      <QuickIcon className="w-4 h-4 text-slate-400" />
-                      <span className="text-[9px] font-semibold text-slate-400 leading-tight text-center">
+                      <QuickIcon className="w-4 h-4 text-slate-500" />
+                      <span className="text-[9px] font-semibold text-slate-500 leading-tight text-center">
                         {role === 'management' ? 'Ops' : role.charAt(0).toUpperCase() + role.slice(1)}
                       </span>
                     </button>
@@ -344,12 +362,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
             </div>
             <span className="text-slate-700">•</span>
             <div className="flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-cyan-400" />
+              <Radio className="w-3.5 h-3.5 text-teal-600" />
               <span>MQTT Ready</span>
             </div>
             <span className="text-slate-700">•</span>
             <div className="flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-blue-400" />
+              <Cpu className="w-3.5 h-3.5 text-emerald-600" />
               <span>3 ESP32</span>
             </div>
           </div>

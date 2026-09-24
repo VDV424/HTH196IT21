@@ -9,16 +9,16 @@ interface WardRoomMapProps {
 
 export const WardRoomMap: React.FC<WardRoomMapProps> = ({ patients, onSelectPatient }) => {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Bed className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <Bed className="w-4 h-4 text-teal-600" />
             Live Patient Attention Ward Map
           </h3>
-          <p className="text-xs text-slate-400">Interactive telemetry overview across hospital care rooms</p>
+          <p className="text-xs text-slate-500">Interactive telemetry overview across hospital care rooms</p>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-slate-400">
+        <div className="flex items-center gap-3 text-[11px] text-slate-500">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
             <span>Stable (&lt;35)</span>
@@ -41,8 +41,8 @@ export const WardRoomMap: React.FC<WardRoomMapProps> = ({ patients, onSelectPati
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2.5">
         {patients.map((p) => {
           const priority = p.trajectory.attention_priority;
-          let borderCol = 'border-slate-800 hover:border-slate-600 bg-slate-950/70';
-          let statusBadge = 'bg-slate-800 text-slate-300';
+          let borderCol = 'border-slate-200 hover:border-slate-400 bg-slate-50/70';
+          let statusBadge = 'bg-slate-100 text-slate-600';
           let dotColor = 'bg-emerald-500';
 
           if (priority >= 70) {
@@ -70,22 +70,22 @@ export const WardRoomMap: React.FC<WardRoomMapProps> = ({ patients, onSelectPati
             >
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-mono font-semibold text-slate-200">{p.room}</span>
+                  <span className="text-[11px] font-mono font-semibold text-slate-700">{p.room}</span>
                   <span className={`w-2 h-2 rounded-full ${dotColor}`} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">{p.patient_id}</span>
+                  <span className="text-xs font-bold text-slate-900">{p.patient_id}</span>
                   <span className={`text-[10px] font-bold px-1 rounded ${statusBadge}`}>
                     {priority.toFixed(0)}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-2 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+              <div className="mt-2 pt-1 border-t border-slate-200/80 flex items-center justify-between text-[10px] text-slate-500">
                 <span className="truncate">{p.assigned_nurse_name ? p.assigned_nurse_name.split(' ')[1] || p.assigned_nurse_name : 'Queue'}</span>
                 <div className="flex items-center gap-1">
-                  {isPhysical && <span title="Physical ESP32 device"><Radio className="w-2.5 h-2.5 text-blue-400" /></span>}
-                  {hasIvIssue && <span title="IV Task"><Droplets className="w-2.5 h-2.5 text-indigo-400" /></span>}
+                  {isPhysical && <span title="Physical ESP32 device"><Radio className="w-2.5 h-2.5 text-emerald-600" /></span>}
+                  {hasIvIssue && <span title="IV Task"><Droplets className="w-2.5 h-2.5 text-violet-600" /></span>}
                   {p.active_alerts_count > 0 && <span title="Active Alert"><AlertCircle className="w-2.5 h-2.5 text-rose-400" /></span>}
                 </div>
               </div>

@@ -103,20 +103,20 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
             ? 'bg-rose-950/40 border-rose-600'
             : p.request_active
             ? 'bg-purple-950/30 border-purple-600'
-            : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+            : 'bg-slate-50 border-slate-200 hover:border-slate-300'
         }`}
       >
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-white text-sm">{p.patient_id} — {p.name}</span>
-            <span className="text-xs text-slate-400 font-mono">({p.room})</span>
+            <span className="font-bold text-slate-900 text-sm">{p.patient_id} — {p.name}</span>
+            <span className="text-xs text-slate-500 font-mono">({p.room})</span>
             {p.sos_active && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-white animate-pulse">
+              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-600 text-slate-900 animate-pulse">
                 🚨 SOS ACTIVE
               </span>
             )}
             {p.request_active && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-600 text-white">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-600 text-slate-900">
                 🔔 REQ: {p.request_type || 'Help'}
               </span>
             )}
@@ -126,10 +126,10 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1 font-mono">
-            <span>HR: <strong className="text-slate-200">{p.current_vitals.heart_rate.toFixed(0)}</strong></span>
-            <span>SpO₂: <strong className="text-slate-200">{p.current_vitals.spo2.toFixed(1)}%</strong></span>
-            <span>Temp: <strong className="text-slate-200">{p.current_vitals.temperature.toFixed(1)}°C</strong></span>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1 font-mono">
+            <span>HR: <strong className="text-slate-700">{p.current_vitals.heart_rate.toFixed(0)}</strong></span>
+            <span>SpO₂: <strong className="text-slate-700">{p.current_vitals.spo2.toFixed(1)}%</strong></span>
+            <span>Temp: <strong className="text-slate-700">{p.current_vitals.temperature.toFixed(1)}°C</strong></span>
             <span className={isLowIV ? 'text-amber-400 font-bold' : ''}>
               IV: {p.current_iv.iv_remaining_ml.toFixed(0)} mL ({p.current_iv.iv_state})
             </span>
@@ -142,7 +142,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
             <button
               onClick={() => handleRefillIV(p.patient_id)}
               disabled={refillingPid === p.patient_id}
-              className="px-2.5 py-1.5 rounded-lg bg-cyan-950 text-cyan-300 hover:bg-cyan-900 border border-cyan-700 text-xs font-semibold flex items-center gap-1 transition-all"
+              className="px-2.5 py-1.5 rounded-lg bg-teal-50 text-cyan-300 hover:bg-cyan-900 border border-cyan-700 text-xs font-semibold flex items-center gap-1 transition-all"
               title="Hang fresh 500mL IV bag"
             >
               <RefreshCw className={`w-3 h-3 ${refillingPid === p.patient_id ? 'animate-spin' : ''}`} />
@@ -154,7 +154,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
             <button
               onClick={() => handleClearSOS(p.patient_id)}
               disabled={clearingSosPid === p.patient_id}
-              className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md"
+              className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-slate-900 text-xs font-bold transition-all shadow-md"
             >
               Clear SOS
             </button>
@@ -164,7 +164,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
             <button
               onClick={() => handleClearRequest(p.patient_id)}
               disabled={clearingReqPid === p.patient_id}
-              className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md"
+              className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-slate-900 text-xs font-bold transition-all shadow-md"
             >
               Clear Req
             </button>
@@ -172,12 +172,12 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
 
           <div className="text-right px-2">
             <span className="text-[9px] text-slate-500 uppercase font-semibold block">Attention</span>
-            <span className="text-sm font-bold font-mono text-cyan-400">{pri.toFixed(0)}</span>
+            <span className="text-sm font-bold font-mono text-teal-600">{pri.toFixed(0)}</span>
           </div>
 
           <button
             onClick={() => onSelectPatient(p)}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-600 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-600 text-slate-900 text-xs font-semibold flex items-center gap-1.5 transition-colors"
           >
             <span>Bedside</span>
             <ExternalLink className="w-3 h-3" />
@@ -190,20 +190,20 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-emerald-950 border border-emerald-700/60 flex items-center justify-center">
             <User className="h-6 w-6 text-emerald-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">{nurse?.name} — Shift Care Queue</h2>
-              <span className="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 font-mono">
+              <h2 className="text-lg font-bold text-slate-900">{nurse?.name} — Shift Care Queue</h2>
+              <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 font-mono">
                 {nurse?.ward}
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Role: <span className="text-slate-200">{nurse?.role}</span> • Capacity:{' '}
+            <p className="text-xs text-slate-500">
+              Role: <span className="text-slate-700">{nurse?.role}</span> • Capacity:{' '}
               <span className="text-emerald-400 font-bold font-mono">
                 {nurse?.assigned_count} / {nurse?.max_capacity} beds ({nurse?.available_capacity} slots remaining)
               </span>
@@ -212,18 +212,18 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-right">
+          <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-right">
             <span className="text-slate-500 block text-[10px] uppercase font-semibold">Shift Workload</span>
-            <span className="font-bold text-white font-mono">{nurse?.workload_percent.toFixed(0)}% Utilized</span>
+            <span className="font-bold text-slate-900 font-mono">{nurse?.workload_percent.toFixed(0)}% Utilized</span>
           </div>
         </div>
       </div>
 
       {/* Emergency SOS Banner if assigned patient has triggered SOS */}
       {sosPatients.length > 0 && (
-        <div className="bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 shadow-2xl animate-pulse text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-rose-950/90 border-2 border-rose-500 rounded-2xl p-4 shadow-2xl animate-pulse text-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <AlertOctagon className="w-7 h-7 text-white flex-shrink-0" />
+            <AlertOctagon className="w-7 h-7 text-slate-900 flex-shrink-0" />
             <div>
               <h3 className="text-base font-bold">🚨 ACTIVE EMERGENCY IN YOUR ASSIGNED ROOM</h3>
               <p className="text-xs text-rose-200">
@@ -247,7 +247,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
 
       {/* Active Bedside Requests Banner */}
       {requestPatients.length > 0 && (
-        <div className="bg-purple-950/80 border border-purple-500/70 rounded-2xl p-4 shadow-xl text-white flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-purple-950/80 border border-purple-500/70 rounded-2xl p-4 shadow-xl text-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Bell className="w-5 h-5 text-purple-300 animate-bounce flex-shrink-0" />
             <div>
@@ -262,7 +262,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
               <button
                 key={p.patient_id}
                 onClick={() => handleClearRequest(p.patient_id)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-md"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-slate-900 transition-all shadow-md"
               >
                 Mark {p.room} Attended
               </button>
@@ -274,7 +274,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
       {/* Tiers Grid */}
       <div className="grid grid-cols-1 gap-5">
         {/* Urgent Attention */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
           <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
             <span>Acute Attention Queue ({urgentPatients.length})</span>
@@ -288,7 +288,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
         </div>
 
         {/* Needs Review */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
           <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4" />
             <span>Trajectory Observation / Review ({reviewPatients.length})</span>
@@ -302,13 +302,13 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
         </div>
 
         {/* IV Care Tasks */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-sm font-bold text-teal-600 uppercase tracking-wider flex items-center gap-2">
               <Droplets className="w-4 h-4" />
               <span>IV Tasks & Fluid Vigilance ({ivTaskPatients.length})</span>
             </h3>
-            <span className="text-[11px] text-slate-400">1-Click Bag Replacement</span>
+            <span className="text-[11px] text-slate-500">1-Click Bag Replacement</span>
           </div>
           <div className="space-y-2.5">
             {ivTaskPatients.map(renderPatientRow)}
@@ -319,7 +319,7 @@ export const NursePersonalPage: React.FC<NursePersonalPageProps> = ({
         </div>
 
         {/* Stable Patients */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md">
           <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
             <CheckCircle className="w-4 h-4" />
             <span>Stable Routine Monitoring ({stablePatients.length})</span>

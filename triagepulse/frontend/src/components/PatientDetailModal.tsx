@@ -137,12 +137,12 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-      <div className={`relative w-full max-w-6xl bg-slate-900 border rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col ${p.sos_active ? 'border-red-500 ring-2 ring-red-500/50' : 'border-slate-800'}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-50/80 backdrop-blur-md overflow-y-auto">
+      <div className={`relative w-full max-w-6xl bg-white border rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col ${p.sos_active ? 'border-red-500 ring-2 ring-red-500/50' : 'border-slate-200'}`}>
 
         {/* SOS Emergency Banner */}
         {p.sos_active && (
-          <div className="px-6 py-3 bg-red-600 text-white flex items-center justify-between">
+          <div className="px-6 py-3 bg-red-600 text-slate-900 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl animate-pulse">🚨</span>
               <div>
@@ -152,7 +152,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
             </div>
             <button
               onClick={handleClearSOS}
-              className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-white/30"
+              className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors border border-white/30"
             >
               ✓ SOS Responded — Clear
             </button>
@@ -161,7 +161,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
         {/* Nurse Request Banner */}
         {p.request_active && !p.sos_active && (
-          <div className="px-6 py-2.5 bg-violet-600/90 text-white flex items-center justify-between">
+          <div className="px-6 py-2.5 bg-violet-600/90 text-slate-900 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-xl">📞</span>
               <div>
@@ -171,49 +171,49 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
             </div>
             <button
               onClick={handleClearRequest}
-              className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold text-xs uppercase tracking-wider transition-colors border border-white/30"
+              className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors border border-white/30"
             >
               ✓ Request Attended — Clear
             </button>
           </div>
         )}
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-cyan-950 border border-cyan-800 flex items-center justify-center">
-              <Activity className="h-5 w-5 text-cyan-400" />
+            <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-teal-600" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-white">{p.patient_id} — {p.name}</h2>
-                <span className="text-xs px-2 py-0.5 rounded font-mono font-semibold bg-slate-800 text-slate-300">
+                <h2 className="text-xl font-bold text-slate-900">{p.patient_id} — {p.name}</h2>
+                <span className="text-xs px-2 py-0.5 rounded font-mono font-semibold bg-slate-100 text-slate-600">
                   {p.room}
                 </span>
                 {p.data_source === 'PHYSICAL_DEVICE' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/20 text-blue-300 border border-emerald-500/30 text-xs font-semibold">
                     <Radio className="w-3 h-3" />
                     PHYSICAL DEVICE ({p.device_id || 'ESP32_P01'})
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
-                Scenario: <span className="text-slate-200 font-medium">{p.scenario}</span> • Assigned Nurse:{' '}
-                <span className="text-slate-200 font-medium">{p.assigned_nurse_name || 'Unassigned (In Queue)'}</span>
+              <p className="text-xs text-slate-500">
+                Scenario: <span className="text-slate-700 font-medium">{p.scenario}</span> • Assigned Nurse:{' '}
+                <span className="text-slate-700 font-medium">{p.assigned_nurse_name || 'Unassigned (In Queue)'}</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Attention Priority</span>
-              <div className="text-2xl font-bold font-mono text-cyan-400">
+              <span className="text-[10px] text-slate-500 uppercase font-semibold block">Attention Priority</span>
+              <div className="text-2xl font-bold font-mono text-teal-600">
                 {traj.attention_priority.toFixed(0)} <span className="text-xs text-slate-500 font-normal">/ 100</span>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -225,18 +225,18 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
           {/* Section 10: SEPARATE PHYSIOLOGY AND CARE-TASK / IV URGENCY */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Physiological Deterioration Card */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                   Physiological Deterioration D(t)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold font-mono text-white">
+                  <span className="text-3xl font-bold font-mono text-slate-900">
                     {traj.deterioration_score.toFixed(0)}
                   </span>
-                  <span className="text-xs text-slate-400 font-sans">/ 100</span>
+                  <span className="text-xs text-slate-500 font-sans">/ 100</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Derived from baseline departure, velocity, persistence, and multi-vital concordance.
                 </p>
               </div>
@@ -256,18 +256,18 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
             </div>
 
             {/* IV Care-Task Urgency Card */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                   Care-Task / IV Urgency U(t)
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-3xl font-bold font-mono text-white">
+                  <span className="text-3xl font-bold font-mono text-slate-900">
                     {traj.iv_urgency_score.toFixed(0)}
                   </span>
-                  <span className="text-xs text-slate-400 font-sans">/ 100</span>
+                  <span className="text-xs text-slate-500 font-sans">/ 100</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Status: <span className="font-semibold text-indigo-300">{p.current_iv.iv_state}</span> ({p.current_iv.iv_remaining_ml.toFixed(0)} mL remaining)
                 </p>
               </div>
@@ -275,7 +275,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               <div className="text-right">
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                   traj.iv_level === 'HIGH'
-                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                    ? 'bg-violet-500/20 text-indigo-300 border border-violet-500/40'
                     : traj.iv_level === 'WATCH'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                     : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
@@ -288,21 +288,21 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
           </div>
 
           {/* Section 9: TRAJECTORY ANALYSIS PANEL ("Why is this patient receiving attention?") */}
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-teal-600" />
                   Why is this patient receiving attention?
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Explainable additive decomposition of the continuous trajectory score
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800">
-                  <span className="text-xs text-slate-400">Trajectory:</span>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200">
+                  <span className="text-xs text-slate-500">Trajectory:</span>
                   {isWorsening ? (
                     <span className="text-xs font-bold text-rose-400 flex items-center gap-1">
                       <ArrowUpRight className="w-4 h-4" /> WORSENING
@@ -312,27 +312,27 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                       <ArrowDownRight className="w-4 h-4" /> IMPROVING
                     </span>
                   ) : (
-                    <span className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                    <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
                       <ArrowRight className="w-4 h-4" /> STABLE
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800">
-                  <span className="text-xs text-slate-400">Confidence:</span>
-                  <span className="text-xs font-bold text-cyan-400">{traj.confidence_level}</span>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200">
+                  <span className="text-xs text-slate-500">Confidence:</span>
+                  <span className="text-xs font-bold text-teal-600">{traj.confidence_level}</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {traj.reasons_breakdown.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-slate-900 border border-slate-800/80">
+                <div key={idx} className="p-3 rounded-lg bg-white border border-slate-200/80">
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-400 font-medium truncate">{item.label}</span>
-                    <span className="font-mono font-bold text-cyan-400">+{item.points}</span>
+                    <span className="text-slate-500 font-medium truncate">{item.label}</span>
+                    <span className="font-mono font-bold text-teal-600">+{item.points}</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-tight">{item.description}</p>
+                  <p className="text-[11px] text-slate-500 leading-tight">{item.description}</p>
                 </div>
               ))}
             </div>
@@ -340,18 +340,18 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
           {/* Section 8: LIVE TREND CHARTS */}
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
               Live Trajectory & Care-Task Telemetry Plots
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* HR Plot */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <Heart className="w-4 h-4 text-rose-500" /> Heart Rate Trend
                   </span>
-                  <span className="text-xs font-mono font-bold text-white">
+                  <span className="text-xs font-mono font-bold text-slate-900">
                     {p.current_vitals.heart_rate.toFixed(0)} bpm
                   </span>
                 </div>
@@ -370,12 +370,12 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               </div>
 
               {/* SpO2 Plot */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Wind className="w-4 h-4 text-cyan-400" /> SpO₂ Trend
+                  <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <Wind className="w-4 h-4 text-teal-600" /> SpO₂ Trend
                   </span>
-                  <span className="text-xs font-mono font-bold text-white">
+                  <span className="text-xs font-mono font-bold text-slate-900">
                     {p.current_vitals.spo2.toFixed(1)}%
                   </span>
                 </div>
@@ -394,12 +394,12 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               </div>
 
               {/* Attention Priority Plot */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
                     <Activity className="w-4 h-4 text-amber-400" /> Overall Attention P(t)
                   </span>
-                  <span className="text-xs font-mono font-bold text-cyan-400">
+                  <span className="text-xs font-mono font-bold text-teal-600">
                     {traj.attention_priority.toFixed(0)} / 100
                   </span>
                 </div>
@@ -419,13 +419,13 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
           </div>
 
           {/* Personal Baseline & Analytical Metrics Table */}
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
               Personal Baseline & Trajectory Metrics
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="text-[11px] text-slate-400 uppercase bg-slate-900/60 border-b border-slate-800">
+                <thead className="text-[11px] text-slate-500 uppercase bg-white/60 border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">Metric</th>
                     <th className="py-2.5 px-3">Current</th>
@@ -439,44 +439,44 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                 </thead>
                 <tbody className="divide-y divide-slate-800 font-mono">
                   <tr>
-                    <td className="py-2 px-3 font-sans font-medium text-slate-200">Heart Rate</td>
-                    <td className="py-2 px-3 text-white">{p.current_vitals.heart_rate.toFixed(0)} bpm</td>
-                    <td className="py-2 px-3 text-slate-400">{p.baseline_hr.toFixed(0)} bpm</td>
+                    <td className="py-2 px-3 font-sans font-medium text-slate-700">Heart Rate</td>
+                    <td className="py-2 px-3 text-slate-900">{p.current_vitals.heart_rate.toFixed(0)} bpm</td>
+                    <td className="py-2 px-3 text-slate-500">{p.baseline_hr.toFixed(0)} bpm</td>
                     <td className="py-2 px-3 text-rose-400">+{traj.baseline_deviation_hr.toFixed(0)}</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.short_term_slope.toFixed(1)}</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.persistence_ticks} ticks</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.short_term_slope.toFixed(1)}</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.persistence_ticks} ticks</td>
                     <td className="py-2 px-3 font-sans text-emerald-400">{traj.multi_vital_agreement ? 'CONCORDANT' : 'Isolated'}</td>
-                    <td className="py-2 px-3 font-sans text-cyan-400">{traj.confidence_level}</td>
+                    <td className="py-2 px-3 font-sans text-teal-600">{traj.confidence_level}</td>
                   </tr>
                   <tr>
-                    <td className="py-2 px-3 font-sans font-medium text-slate-200">SpO₂</td>
-                    <td className="py-2 px-3 text-white">{p.current_vitals.spo2.toFixed(1)}%</td>
-                    <td className="py-2 px-3 text-slate-400">{p.baseline_spo2.toFixed(1)}%</td>
+                    <td className="py-2 px-3 font-sans font-medium text-slate-700">SpO₂</td>
+                    <td className="py-2 px-3 text-slate-900">{p.current_vitals.spo2.toFixed(1)}%</td>
+                    <td className="py-2 px-3 text-slate-500">{p.baseline_spo2.toFixed(1)}%</td>
                     <td className="py-2 px-3 text-rose-400">-{traj.baseline_deviation_spo2.toFixed(1)}%</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.short_term_slope.toFixed(1)}</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.persistence_ticks} ticks</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.short_term_slope.toFixed(1)}</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.persistence_ticks} ticks</td>
                     <td className="py-2 px-3 font-sans text-emerald-400">{traj.multi_vital_agreement ? 'CONCORDANT' : 'Isolated'}</td>
-                    <td className="py-2 px-3 font-sans text-cyan-400">{traj.confidence_level}</td>
+                    <td className="py-2 px-3 font-sans text-teal-600">{traj.confidence_level}</td>
                   </tr>
                   <tr>
-                    <td className="py-2 px-3 font-sans font-medium text-slate-200">Body Temp</td>
-                    <td className="py-2 px-3 text-white">{p.current_vitals.temperature.toFixed(1)}°C</td>
-                    <td className="py-2 px-3 text-slate-400">{p.baseline_temp.toFixed(1)}°C</td>
+                    <td className="py-2 px-3 font-sans font-medium text-slate-700">Body Temp</td>
+                    <td className="py-2 px-3 text-slate-900">{p.current_vitals.temperature.toFixed(1)}°C</td>
+                    <td className="py-2 px-3 text-slate-500">{p.baseline_temp.toFixed(1)}°C</td>
                     <td className="py-2 px-3 text-amber-400">+{traj.baseline_deviation_temp.toFixed(1)}°C</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.short_term_slope.toFixed(1)}</td>
-                    <td className="py-2 px-3 text-slate-300">{traj.persistence_ticks} ticks</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.short_term_slope.toFixed(1)}</td>
+                    <td className="py-2 px-3 text-slate-600">{traj.persistence_ticks} ticks</td>
                     <td className="py-2 px-3 font-sans text-emerald-400">{traj.multi_vital_agreement ? 'CONCORDANT' : 'Isolated'}</td>
-                    <td className="py-2 px-3 font-sans text-cyan-400">{traj.confidence_level}</td>
+                    <td className="py-2 px-3 font-sans text-teal-600">{traj.confidence_level}</td>
                   </tr>
                   <tr>
-                    <td className="py-2 px-3 font-sans font-medium text-slate-200">IV Remaining Volume</td>
+                    <td className="py-2 px-3 font-sans font-medium text-slate-700">IV Remaining Volume</td>
                     <td className="py-2 px-3 text-indigo-300 font-semibold">{p.current_iv.iv_remaining_ml.toFixed(0)} mL</td>
-                    <td className="py-2 px-3 text-slate-400">500 mL bag</td>
-                    <td className="py-2 px-3 text-indigo-400">Flow: {p.current_iv.iv_flow} mL/h</td>
-                    <td className="py-2 px-3 text-slate-300">Empty: {p.current_iv.estimated_time_to_empty_min ? `${p.current_iv.estimated_time_to_empty_min.toFixed(0)}m` : 'N/A'}</td>
-                    <td className="py-2 px-3 text-slate-400">--</td>
-                    <td className="py-2 px-3 font-sans text-slate-400">IV Task Channel</td>
-                    <td className="py-2 px-3 font-sans text-cyan-400">HIGH</td>
+                    <td className="py-2 px-3 text-slate-500">500 mL bag</td>
+                    <td className="py-2 px-3 text-violet-600">Flow: {p.current_iv.iv_flow} mL/h</td>
+                    <td className="py-2 px-3 text-slate-600">Empty: {p.current_iv.estimated_time_to_empty_min ? `${p.current_iv.estimated_time_to_empty_min.toFixed(0)}m` : 'N/A'}</td>
+                    <td className="py-2 px-3 text-slate-500">--</td>
+                    <td className="py-2 px-3 font-sans text-slate-500">IV Task Channel</td>
+                    <td className="py-2 px-3 font-sans text-teal-600">HIGH</td>
                   </tr>
                 </tbody>
               </table>
@@ -484,8 +484,8 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
           </div>
 
           {/* SOS & Nurse Request Bedside Controls */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-2">
               🔘 Bedside Button Simulation
               <span className="text-[10px] font-normal text-slate-500">(ESP32 physical buttons or dashboard triggers)</span>
             </h4>
@@ -494,7 +494,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               {!p.sos_active ? (
                 <button
                   onClick={handleTriggerSOS}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition-all shadow-lg shadow-red-600/30 hover:shadow-red-500/40 hover:scale-105 active:scale-95"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-slate-900 font-bold text-sm transition-all shadow-lg shadow-red-600/30 hover:shadow-red-500/40 hover:scale-105 active:scale-95"
                 >
                   <span className="text-lg">🚨</span>
                   SOS Emergency
@@ -510,7 +510,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               )}
 
               {/* Divider */}
-              <div className="h-8 w-px bg-slate-700"></div>
+              <div className="h-8 w-px bg-slate-200"></div>
 
               {/* Nurse Request Buttons */}
               {!p.request_active ? (
@@ -520,7 +520,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                     <button
                       key={reqType}
                       onClick={() => handleTriggerRequest(reqType)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600/80 hover:bg-violet-500 text-white font-semibold text-xs transition-all hover:scale-105 active:scale-95"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600/80 hover:bg-violet-500 text-slate-900 font-semibold text-xs transition-all hover:scale-105 active:scale-95"
                     >
                       <span className="text-sm">📞</span>
                       {reqType}
@@ -545,7 +545,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               {/* Doctor Escalation Trigger */}
               <button
                 onClick={() => setEscalating(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-rose-600/20"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-slate-900 font-semibold text-xs transition-colors shadow-lg shadow-rose-600/20"
               >
                 <ShieldAlert className="w-4 h-4" />
                 <span>Escalate to Doctor</span>
@@ -555,9 +555,9 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
               <button
                 onClick={handleGenerateHandover}
                 disabled={generatingHandover}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
               >
-                <FileText className="w-4 h-4 text-cyan-400" />
+                <FileText className="w-4 h-4 text-teal-600" />
                 <span>{generatingHandover ? 'Generating Handover...' : 'Generate Handover Summary'}</span>
               </button>
             </div>
@@ -572,31 +572,31 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
           {/* Doctor Escalation Form Inline Modal */}
           {escalating && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-rose-500/50 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 border border-rose-500/50 space-y-3">
               <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" />
                 Simulated Doctor Escalation Request
               </h4>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 Log a clinical attention review request with the on-duty medical officer.
               </p>
               <textarea
                 value={escalationReason}
                 onChange={(e) => setEscalationReason(e.target.value)}
                 placeholder="Reason for escalation (e.g. Rapid multi-vital worsening trajectory, SpO2 persisting below 90% despite standard observation)..."
-                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-500 resize-none h-20"
+                className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-rose-500 resize-none h-20"
               />
               <div className="flex items-center justify-end gap-2">
                 <button
                   onClick={() => setEscalating(false)}
-                  className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
+                  className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-900"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDoctorEscalation}
                   disabled={!escalationReason}
-                  className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-slate-900 font-semibold text-xs disabled:opacity-50"
                 >
                   Confirm Escalation
                 </button>
@@ -606,17 +606,17 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
 
           {/* Handover Record Drawer */}
           {handoverRecord && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/40 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 border border-teal-500/40 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-teal-600 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText className="w-4 h-4" />
                   Generated Shift Handover Record ({handoverRecord.id})
                 </h4>
-                <span className="text-[11px] text-slate-400 font-mono">
+                <span className="text-[11px] text-slate-500 font-mono">
                   Recommended review: In {handoverRecord.recommended_next_review_min} min
                 </span>
               </div>
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-200 text-xs font-mono whitespace-pre-wrap leading-relaxed border border-slate-800">
+              <pre className="p-3 rounded-lg bg-white text-slate-700 text-xs font-mono whitespace-pre-wrap leading-relaxed border border-slate-200">
                 {handoverRecord.summary_text}
               </pre>
               <div className="flex items-center justify-between text-xs">
@@ -625,7 +625,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                 </span>
                 <button
                   onClick={() => setHandoverRecord(null)}
-                  className="text-slate-400 hover:text-white text-xs"
+                  className="text-slate-500 hover:text-slate-900 text-xs"
                 >
                   Dismiss
                 </button>

@@ -21,25 +21,25 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-teal-600" />
             Capacity-Aware Nurse Triage & Allocation Engine
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Dynamic load-balancing considering clinical attention priority, capability matching, ward proximity, and strict workload quotas (Max {nurses[0]?.max_capacity || 5} patients/nurse).
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300">
+          <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
             <span className="text-slate-500 block text-[10px] uppercase font-semibold">Total Nurses</span>
-            <span className="font-bold text-white">{nurses.length} on duty</span>
+            <span className="font-bold text-slate-900">{nurses.length} on duty</span>
           </div>
-          <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300">
+          <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
             <span className="text-slate-500 block text-[10px] uppercase font-semibold">Available Slots</span>
-            <span className="font-bold text-cyan-400">
+            <span className="font-bold text-teal-600">
               {nurses.reduce((acc, n) => acc + n.available_capacity, 0)} capacity margin
             </span>
           </div>
@@ -57,10 +57,10 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
           return (
             <div
               key={nurse.nurse_id}
-              className={`rounded-xl border p-5 transition-all duration-200 bg-slate-900 flex flex-col justify-between ${
+              className={`rounded-xl border p-5 transition-all duration-200 bg-white flex flex-col justify-between ${
                 isAtCapacity
                   ? 'border-amber-500/50 shadow-lg shadow-amber-950/20'
-                  : 'border-slate-800 hover:border-slate-700'
+                  : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               <div>
@@ -68,11 +68,11 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-base text-white">{nurse.name}</h3>
-                      <span className="text-xs text-slate-400 font-mono">({nurse.nurse_id})</span>
+                      <h3 className="font-bold text-base text-slate-900">{nurse.name}</h3>
+                      <span className="text-xs text-slate-500 font-mono">({nurse.nurse_id})</span>
                     </div>
-                    <p className="text-xs text-cyan-400 font-medium">{nurse.role}</p>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1">
+                    <p className="text-xs text-teal-600 font-medium">{nurse.role}</p>
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
                       <MapPin className="w-3 h-3 text-slate-500" />
                       <span>{nurse.ward}</span>
                     </div>
@@ -88,20 +88,20 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
                 </div>
 
                 {/* Workload Progress Bar */}
-                <div className="mt-4 pt-3 border-t border-slate-800">
+                <div className="mt-4 pt-3 border-t border-slate-200">
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-400 font-medium">Workload Utilization</span>
-                    <span className="font-mono font-bold text-white">
+                    <span className="text-slate-500 font-medium">Workload Utilization</span>
+                    <span className="font-mono font-bold text-slate-900">
                       {nurse.assigned_count} / {nurse.max_capacity} beds ({nurse.workload_percent.toFixed(0)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                  <div className="w-full bg-slate-50 rounded-full h-2.5 overflow-hidden border border-slate-200">
                     <div
                       className={`h-full transition-all duration-500 ${
                         nurse.workload_percent >= 100
                           ? 'bg-amber-500'
                           : nurse.workload_percent >= 70
-                          ? 'bg-cyan-500'
+                          ? 'bg-teal-500'
                           : 'bg-emerald-500'
                       }`}
                       style={{ width: `${Math.min(100, nurse.workload_percent)}%` }}
@@ -111,14 +111,14 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
 
                 {/* Core Capabilities */}
                 <div className="mt-4">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
                     Specialized Capabilities:
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {nurse.capabilities.map((cap, i) => (
                       <span
                         key={i}
-                        className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] text-slate-300"
+                        className="px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-[10px] text-slate-600"
                       >
                         {cap}
                       </span>
@@ -128,7 +128,7 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
 
                 {/* Active Assigned Patient Badges */}
                 <div className="mt-4">
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     <span>Assigned Patients ({nurse.assigned_count}):</span>
                     {nurse.high_priority_count > 0 && (
                       <span className="text-rose-400 font-bold">
@@ -143,17 +143,17 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
                         <button
                           key={p.patient_id}
                           onClick={() => onSelectPatient(p)}
-                          className="w-full p-2 rounded-lg bg-slate-950 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between text-xs text-left transition-colors"
+                          className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-slate-300 flex items-center justify-between text-xs text-left transition-colors"
                         >
                           <div>
-                            <span className="font-bold text-white mr-1.5">{p.patient_id}</span>
-                            <span className="text-slate-400 text-[11px]">({p.room})</span>
+                            <span className="font-bold text-slate-900 mr-1.5">{p.patient_id}</span>
+                            <span className="text-slate-500 text-[11px]">({p.room})</span>
                             <span className="text-[10px] text-slate-500 ml-2 truncate max-w-[120px] inline-block">
                               {p.scenario}
                             </span>
                           </div>
                           <span className={`px-1.5 py-0.2 rounded font-mono text-[10px] font-bold ${
-                            pri >= 60 ? 'bg-rose-500/20 text-rose-300' : pri >= 35 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-300'
+                            pri >= 60 ? 'bg-rose-500/20 text-rose-300' : pri >= 35 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-100 text-slate-600'
                           }`}>
                             P: {pri.toFixed(0)}
                           </span>
@@ -168,9 +168,9 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
               </div>
 
               {/* Bottom Availability Status */}
-              <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
                 <span>Available Margin:</span>
-                <span className="font-semibold text-cyan-400 font-mono">
+                <span className="font-semibold text-teal-600 font-mono">
                   {nurse.available_capacity} bed slot{nurse.available_capacity !== 1 ? 's' : ''} left
                 </span>
               </div>
@@ -180,18 +180,18 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
       </div>
 
       {/* Section 13: DYNAMIC ALLOCATION EXPLANATION FEED */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-teal-600" />
               Allocation Decision Explanations ("Why was patient assigned to this nurse?")
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Explainable transparent reasoning generated for every automated triage decision
             </p>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="text-xs text-slate-500 font-mono">
             {explanations.length} Active Decisions
           </span>
         </div>
@@ -205,26 +205,26 @@ export const NurseAllocationPage: React.FC<NurseAllocationPageProps> = ({
                 className={`p-3.5 rounded-lg border text-xs ${
                   isOverflow
                     ? 'bg-rose-950/20 border-rose-500/50'
-                    : 'bg-slate-950 border-slate-800/80 hover:border-slate-700'
+                    : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white font-mono">{exp.patient_id}</span>
-                    <span className="text-slate-400">→</span>
-                    <span className={`font-semibold ${isOverflow ? 'text-rose-400' : 'text-cyan-400'}`}>
+                    <span className="font-bold text-slate-900 font-mono">{exp.patient_id}</span>
+                    <span className="text-slate-500">→</span>
+                    <span className={`font-semibold ${isOverflow ? 'text-rose-400' : 'text-teal-600'}`}>
                       {exp.nurse_name}
                     </span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
                     exp.priority_level === 'HIGH' || isOverflow
                       ? 'bg-rose-500/20 text-rose-300'
-                      : 'bg-slate-800 text-slate-300'
+                      : 'bg-slate-100 text-slate-600'
                   }`}>
                     {exp.priority_level}
                   </span>
                 </div>
-                <p className="text-slate-300 leading-relaxed font-mono text-[11px]">
+                <p className="text-slate-600 leading-relaxed font-mono text-[11px]">
                   {exp.reason}
                 </p>
               </div>

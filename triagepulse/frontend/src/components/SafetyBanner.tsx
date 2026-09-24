@@ -15,7 +15,7 @@ export const SafetyBanner: React.FC = () => {
           This prototype provides workflow and research signals only. It does not diagnose, prescribe, or autonomously control medical equipment.
         </span>
       </div>
-      <div className="flex items-center gap-2 text-slate-400 text-[11px] ml-auto">
+      <div className="flex items-center gap-2 text-slate-500 text-[11px] ml-auto">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
         <span>Research Sandbox Mode</span>
       </div>

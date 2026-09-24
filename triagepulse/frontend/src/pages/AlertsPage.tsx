@@ -75,18 +75,18 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Section 11: ALERT FATIGUE REDUCTION BANNER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-lg">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-800">
+              <span className="p-2 rounded-lg bg-teal-50 text-teal-600 border border-teal-200">
                 <Bell className="w-5 h-5" />
               </span>
               <div>
-                <h2 className="text-base font-bold text-white">
+                <h2 className="text-base font-bold text-slate-900">
                   Alert Episode Deduplication & Fatigue Reduction
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Continuous abnormal vitals are compressed into single, evolving alert episodes rather than triggering spam alarms.
                 </p>
               </div>
@@ -95,20 +95,20 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
 
           {/* 3 Compression Metric Chips */}
           <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto">
-            <div className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-center min-w-[110px]">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">
+            <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-[110px]">
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block">
                 Raw Observations
               </span>
-              <span className="text-xl font-bold font-mono text-white">
+              <span className="text-xl font-bold font-mono text-slate-900">
                 {rawObservationsCount || alerts.reduce((acc, a) => acc + a.raw_observations_count, 0)}
               </span>
             </div>
 
-            <div className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-center min-w-[110px]">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">
+            <div className="px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-center min-w-[110px]">
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block">
                 Alert Episodes
               </span>
-              <span className="text-xl font-bold font-mono text-cyan-400">
+              <span className="text-xl font-bold font-mono text-teal-600">
                 {alerts.length}
               </span>
             </div>
@@ -134,8 +134,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
               onClick={() => setFilterStatus(st)}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
                 filterStatus === st
-                  ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                  ? 'bg-teal-600 text-slate-900 shadow-sm'
+                  : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900'
               }`}
             >
               {st.replace('_', ' ')}
@@ -149,10 +149,10 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       </div>
 
       {/* Alerts Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-800">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase text-[11px] font-semibold border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">Episode ID</th>
                 <th className="py-3 px-3">Patient / Bed</th>
@@ -170,7 +170,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                 const p = patientMap.get(alert.patient_id);
                 const isWorking = loadingAction === alert.id;
 
-                let sevStyle = 'bg-slate-800 text-slate-300';
+                let sevStyle = 'bg-slate-100 text-slate-600';
                 if (alert.severity === 'IMMEDIATE_REVIEW' || alert.severity === 'HIGH_ATTENTION') {
                   sevStyle = 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse';
                 } else if (alert.severity === 'REVIEW') {
@@ -179,17 +179,17 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                   sevStyle = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
                 }
 
-                let statusStyle = 'text-slate-300 bg-slate-800';
+                let statusStyle = 'text-slate-600 bg-slate-100';
                 if (alert.status === 'OPEN') statusStyle = 'text-rose-400 bg-rose-950/60 border border-rose-800/60';
                 if (alert.status === 'ACKNOWLEDGED') statusStyle = 'text-amber-400 bg-amber-950/60 border border-amber-800/60';
-                if (alert.status === 'UNDER_REVIEW') statusStyle = 'text-cyan-400 bg-cyan-950/60 border border-cyan-800/60';
+                if (alert.status === 'UNDER_REVIEW') statusStyle = 'text-teal-600 bg-teal-50/60 border border-teal-200/60';
                 if (alert.status === 'ESCALATED') statusStyle = 'text-purple-400 bg-purple-950/60 border border-purple-800/60';
                 if (alert.status === 'RESOLVED') statusStyle = 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/60';
 
                 return (
-                  <tr key={alert.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={alert.id} className="hover:bg-slate-100/30 transition-colors">
                     {/* ID */}
-                    <td className="py-3 px-4 font-bold text-white text-xs">{alert.id}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900 text-xs">{alert.id}</td>
 
                     {/* Patient */}
                     <td className="py-3 px-3">
@@ -197,13 +197,13 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                         onClick={() => p && onSelectPatient(p)}
                         className="text-left group"
                       >
-                        <span className="font-bold text-cyan-400 group-hover:underline">{alert.patient_id}</span>
+                        <span className="font-bold text-teal-600 group-hover:underline">{alert.patient_id}</span>
                         <span className="text-slate-500 text-[11px] block">{alert.room}</span>
                       </button>
                     </td>
 
                     {/* Alert Type */}
-                    <td className="py-3 px-3 font-sans font-medium text-slate-200">
+                    <td className="py-3 px-3 font-sans font-medium text-slate-700">
                       {alert.alert_type}
                     </td>
 
@@ -223,18 +223,18 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
 
                     {/* Compressed Observations */}
                     <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-200 font-bold">
+                      <span className="px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-700 font-bold">
                         {alert.raw_observations_count}x
                       </span>
                     </td>
 
                     {/* Nurse */}
-                    <td className="py-3 px-3 font-sans text-slate-300">
+                    <td className="py-3 px-3 font-sans text-slate-600">
                       {alert.assigned_nurse || 'Unassigned'}
                     </td>
 
                     {/* Reason */}
-                    <td className="py-3 px-3 font-sans text-slate-300 max-w-xs truncate" title={alert.reason}>
+                    <td className="py-3 px-3 font-sans text-slate-600 max-w-xs truncate" title={alert.reason}>
                       {alert.reason}
                     </td>
 
@@ -245,7 +245,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                           <button
                             onClick={() => handleAcknowledge(alert.id)}
                             disabled={isWorking}
-                            className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-medium"
+                            className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-slate-900 text-[11px] font-medium"
                           >
                             Acknowledge
                           </button>
@@ -255,7 +255,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                           <button
                             onClick={() => handleReview(alert.id)}
                             disabled={isWorking}
-                            className="px-2 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-medium"
+                            className="px-2 py-1 rounded bg-teal-600 hover:bg-teal-500 text-slate-900 text-[11px] font-medium"
                           >
                             Review
                           </button>
@@ -265,7 +265,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                           <button
                             onClick={() => handleEscalate(alert.id)}
                             disabled={isWorking}
-                            className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-medium"
+                            className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-slate-900 text-[11px] font-medium"
                           >
                             Escalate
                           </button>
@@ -275,7 +275,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                           <button
                             onClick={() => handleResolve(alert.id)}
                             disabled={isWorking}
-                            className="px-2 py-1 rounded bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-[11px] font-medium"
+                            className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-600 text-slate-600 hover:text-slate-900 text-[11px] font-medium"
                           >
                             Resolve
                           </button>
