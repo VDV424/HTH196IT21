@@ -1,23 +1,37 @@
-# 🩺 TriagePulse — Trajectory-Aware Smart Hospital Monitoring & Multi-Role Triage
+<div align="center">
+  <img src="docs/images/logo.png" alt="TriagePulse Logo" width="220" style="border-radius: 50%; box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);" />
+  
+  # 🩺 TriagePulse — Trajectory-Aware Smart Hospital Monitoring & Multi-Role Triage
+  
+  <p>
+    <strong>Official Hackathon Repository for Project: <code>HTH196IT21</code></strong><br />
+    <em>“Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage”</em>
+  </p>
 
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/Frontend-React_18_+_Vite-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/Language-TypeScript_5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![MQTT Ready](https://img.shields.io/badge/IoT-MQTT_Broker_Ready-660066.svg?logo=mqtt&logoColor=white)](https://mqtt.org)
-[![Pytest](https://img.shields.io/badge/Tests-8%2F8_Passing_(100%25)-brightgreen.svg?logo=pytest&logoColor=white)](https://pytest.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  <p>
+    <a href="#-quick-start-guide"><strong>Explore Quickstart »</strong></a> •
+    <a href="#-the-4-distinct-role-based-portals"><strong>Role Portals</strong></a> •
+    <a href="#-system-architecture"><strong>Architecture</strong></a> •
+    <a href="#-3-minute-live-hackathon-demo-walkthrough"><strong>3-Min Demo Script</strong></a>
+  </p>
 
-> **“Trajectory-aware patient monitoring, IV oversight and capacity-aware nurse triage”**  
-> *Repository for Hackathon Project: `VDV424/HTH196IT21`*  
-> *Educational & Research Prototype Only — Not for clinical diagnosis, treatment prescription, or equipment control.*
+  <p>
+    <img src="https://img.shields.io/badge/Backend-FastAPI_0.115+-009688.svg?logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Frontend-React_18_+_Vite-61DAFB.svg?logo=react&logoColor=black" alt="React" />
+    <img src="https://img.shields.io/badge/Language-TypeScript_5.0-3178C6.svg?logo=typescript&logoColor=white" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white" alt="Python" />
+    <img src="https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC.svg?logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+    <img src="https://img.shields.io/badge/IoT-MQTT_Ready-660066.svg?logo=mqtt&logoColor=white" alt="MQTT" />
+    <img src="https://img.shields.io/badge/Tests-8%2F8_Passing_(100%25)-brightgreen.svg?logo=pytest&logoColor=white" alt="Tests" />
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+  </p>
+</div>
 
 ---
 
 ## ⚠️ Important Educational / Research Disclaimer
-**SIMULATED / EDUCATIONAL PROTOTYPE ONLY — NOT FOR CLINICAL USE.**  
-This system demonstrates conceptual trajectory-based scoring, dynamic nurse workload balancing, and alert fatigue reduction algorithms. It does **not** diagnose medical diseases, prescribe medications or treatments, control intravenous infusion equipment, or claim clinical validation.
+> **SIMULATED / EDUCATIONAL PROTOTYPE ONLY — NOT FOR CLINICAL USE.**  
+> This system demonstrates conceptual trajectory-based scoring, dynamic nurse workload balancing, and alert fatigue reduction algorithms. It does **not** diagnose medical diseases, prescribe medications or treatments, control intravenous infusion equipment, or claim clinical validation.
 
 ---
 
@@ -38,6 +52,40 @@ Traditional hospital patient telemetry monitors suffer from severe **alarm fatig
    - 🏢 **Operations & Management**: Ward bed capacity heatmap (20 beds), nurse burnout variance index, alarm fatigue reduction audit (94.3% false alarm suppression), and 3-hour pharmacy IV depletion forecast.
 6. **Closed-Loop IoT Simulation**: Native Web Audio synthesized alert chimes and confirmation tones for responsive multisensory clinical feedback.
 7. **IoT & Edge Ready**: Pre-architected to seamlessly ingest telemetry from 3 physical ESP32 patient monitoring nodes or up to 20 simulated beds.
+
+---
+
+## 📸 Interactive System Dashboards
+
+### 1. 🩺 Nurse Command Grid & Priority Queue
+Real-time triage queue continuously sorted by Attention Priority $P(t)$, complete with 2D room map, signal quality confidence, and dynamic nurse dispatch.
+<p align="center">
+  <img src="docs/images/nurse_command_grid.png" alt="Nurse Command Grid" width="95%" style="border-radius: 12px; border: 1px solid #1e293b;" />
+</p>
+
+### 2. 👨‍⚕️ Doctor Clinical Portal & Protocol Ordering
+Deterioration trend forensics, MEWS2 trajectory radar, structured SBAR handovers, and 1-click clinical order placement.
+<p align="center">
+  <img src="docs/images/doctor_portal.png" alt="Doctor Clinical Portal" width="95%" style="border-radius: 12px; border: 1px solid #1e293b;" />
+</p>
+
+### 3. 🛌 Patient & Family Bedside Companion Tablet
+Reassuring wellness monitor for hospital rooms, intuitive liquid IV progress ring, 1-tap comfort requests, and tactile Emergency SOS panic button.
+<p align="center">
+  <img src="docs/images/patient_kiosk.png" alt="Patient Bedside Kiosk" width="95%" style="border-radius: 12px; border: 1px solid #1e293b;" />
+</p>
+
+### 4. 🏢 Hospital Operations & Ward Capacity Heatmap
+20-bed occupancy & acuity heatmap, nurse burnout risk index, alarm fatigue suppression audit (94.3% false alarms cut), and 3-hour pharmacy IV depletion timeline.
+<p align="center">
+  <img src="docs/images/operations_portal.png" alt="Hospital Operations Dashboard" width="95%" style="border-radius: 12px; border: 1px solid #1e293b;" />
+</p>
+
+### 5. 🔬 Bedside Telemetry & Trajectory Decomposition Modal
+Real-time streaming ECG and vital charts with additive point decomposition of clinical factors.
+<p align="center">
+  <img src="docs/images/patient_modal.png" alt="Bedside Detail Modal" width="95%" style="border-radius: 12px; border: 1px solid #1e293b;" />
+</p>
 
 ---
 
@@ -189,6 +237,8 @@ python -m pytest tests -v
 HTH196IT21/
 ├── .github/                     # Issue & PR templates for GitHub project management
 ├── .gitignore                   # Production git ignore (Node, Python, SQLite, envs)
+├── docs/                        # Architecture guides & system visual assets
+│   └── images/                  # Team logo & full dashboard portal screenshots
 ├── LICENSE                      # Open-source MIT License
 ├── README.md                    # Root project presentation & documentation
 ├── start.bat                    # One-click Windows launch script
@@ -220,5 +270,15 @@ HTH196IT21/
 
 ---
 
+## 👥 Team HTH196IT21
+
+| Team Role | Focus Area |
+| :--- | :--- |
+| **Lead IoT Systems Architect** | ESP32 telemetry ingestion, MQTT adapter, load-cell ADC calibration |
+| **Full-Stack Clinical Software Engineer** | FastAPI async WebSocket pipeline, Trajectory $D(t)$ formulation, Pytest suite |
+| **Clinical UI/UX Designer** | Multi-role portals (Nurse Command, Doctor SBAR, Patient Tablet Kiosk, Executive) |
+
+---
+
 ## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](file:///c:/Users/varun/Downloads/hackathone%20project/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
