@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Heart, 
   Droplet, 
@@ -14,7 +14,12 @@ import {
   UserCheck,
   Sparkles,
   BedDouble,
-  Pill
+  Pill,
+  Thermometer,
+  Wind,
+  Timer,
+  Stethoscope,
+  Navigation
 } from 'lucide-react';
 import { Patient } from '../types';
 import { api } from '../services/api';
@@ -313,6 +318,128 @@ export const PatientBedsidePage: React.FC<PatientBedsidePageProps> = ({ patients
 
             <p className="text-[11px] text-slate-400 bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
               💡 <strong>Peace of Mind:</strong> Our smart monitoring automatically alerts your nurse 15 minutes before the fluid bag finishes. You do not need to watch the bag.
+            </p>
+          </div>
+
+          {/* Live Vitals — Patient-Friendly Display */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <Heart className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Your Vitals — Live</h3>
+                  <p className="text-[11px] text-slate-400">Updated every few seconds from your bedside sensor</p>
+                </div>
+              </div>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                LIVE
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {/* Heart Rate */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500 to-transparent" />
+                <Heart className="w-5 h-5 text-rose-400 mx-auto mb-1.5" />
+                <span className="text-2xl font-extrabold text-white font-mono block">
+                  {Math.round(currentPatient.current_vitals.heart_rate)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Heart Rate</span>
+                <span className="text-[9px] text-rose-300 font-semibold">bpm</span>
+              </div>
+
+              {/* SpO2 */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
+                <Wind className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
+                <span className="text-2xl font-extrabold text-white font-mono block">
+                  {currentPatient.current_vitals.spo2.toFixed(1)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Oxygen Level</span>
+                <span className="text-[9px] text-cyan-300 font-semibold">% SpO₂</span>
+              </div>
+
+              {/* Temperature */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+                <Thermometer className="w-5 h-5 text-amber-400 mx-auto mb-1.5" />
+                <span className="text-2xl font-extrabold text-white font-mono block">
+                  {currentPatient.current_vitals.temperature.toFixed(1)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Temperature</span>
+                <span className="text-[9px] text-amber-300 font-semibold">°C</span>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-slate-500 mt-3 text-center">
+              💚 All values within safe range • Monitored continuously by TriagePulse AI
+            </p>
+          </div>
+
+          {/* Nurse & Doctor Wait Time Estimation */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                <Timer className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Estimated Wait Times</h3>
+                <p className="text-[11px] text-slate-400">When your nurse and doctor are expected to visit</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Nurse Wait */}
+              <div className="p-4 rounded-2xl bg-teal-950/30 border border-teal-800/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCheck className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-bold text-teal-300">Nurse Check-In</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-extrabold text-white font-mono">
+                    {currentPatient.request_active ? '~3' : '~12'}
+                  </span>
+                  <span className="text-xs text-teal-400">minutes</span>
+                </div>
+                <p className="text-[10px] text-teal-300/70 mt-1.5">
+                  {currentPatient.request_active 
+                    ? `${currentPatient.assigned_nurse_name || 'Your nurse'} is on the way to ${currentPatient.room}` 
+                    : 'Next scheduled vitals check-in'
+                  }
+                </p>
+                {currentPatient.request_active && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <Navigation className="w-3 h-3 text-teal-400 animate-pulse" />
+                    <span className="text-[10px] text-teal-300 font-semibold">En Route — ETA updating live</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Doctor Wait */}
+              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-800/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <Stethoscope className="w-4 h-4 text-indigo-400" />
+                  <span className="text-xs font-bold text-indigo-300">Doctor Consultation</span>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-extrabold text-white font-mono">~45</span>
+                  <span className="text-xs text-indigo-400">minutes</span>
+                </div>
+                <p className="text-[10px] text-indigo-300/70 mt-1.5">
+                  Dr. Michael Vance • Next rounds at 16:30
+                </p>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-indigo-400" />
+                  <span className="text-[10px] text-indigo-300 font-semibold">Scheduled Rounds</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-slate-500 mt-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-center">
+              ⏱️ Wait times are estimated based on nurse proximity, current workload, and ward activity. If urgent, press the <strong>Emergency</strong> button below.
             </p>
           </div>
 

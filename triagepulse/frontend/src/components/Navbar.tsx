@@ -12,7 +12,8 @@ import {
   User,
   Stethoscope,
   BedDouble,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
 
 export type PortalType = 'nurse' | 'doctor' | 'patient' | 'management';
@@ -30,6 +31,8 @@ interface NavbarProps {
   activeAlertCount: number;
   pendingEscalationsCount?: number;
   sosActiveCount?: number;
+  loggedInUser?: { name: string; id: string };
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,6 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeAlertCount,
   pendingEscalationsCount = 0,
   sosActiveCount = 0,
+  loggedInUser,
+  onLogout,
 }) => {
   const nurseTabs = [
     { id: 'dashboard', label: 'Command Grid', icon: LayoutDashboard },
@@ -183,6 +188,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <option value="Nurse C" className="bg-slate-900 text-slate-100">Nurse C (General)</option>
                 </select>
               </div>
+            )}
+
+            {/* Logout Button */}
+            {loggedInUser && onLogout && (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all"
+                title={`Signed in as ${loggedInUser.name}`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Sign Out</span>
+              </button>
             )}
           </div>
         </div>
