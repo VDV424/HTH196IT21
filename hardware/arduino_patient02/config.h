@@ -51,14 +51,21 @@
 #define MAX30102_PULSE_WIDTH      411
 #define MAX30102_ADC_RANGE        4096
 
-// Finger detection threshold
-#define FINGER_DETECT_THRESHOLD   50000
+// Finger detection threshold (calibrated for sensitivity)
+#define FINGER_DETECT_THRESHOLD   30000
+
+// ======================== DS18B20 CONFIG ========================
+#define DS18B20_RESOLUTION        10   // 10-bit (0.25°C precision in 187ms)
+
+// ======================== FALLBACK / DEMO MODE ========================
+// When physical sensors are disconnected, generate realistic vitals for testing
+#define DEMO_FALLBACK_ENABLED     true
 
 // ======================== TIMING ========================
 #define SENSOR_READ_INTERVAL_MS   2000   // Read sensors every 2 seconds
 #define UART_SEND_INTERVAL_MS     3000   // Send data to ESP32 every 3 seconds
 #define SOS_DEBOUNCE_MS           300    // SOS button debounce
-#define BUZZER_DURATION_MS        200    // Buzzer beep duration
+#define BUZZER_DURATION_MS        150    // Buzzer beep duration
 
 // ======================== HR AVERAGING ========================
 #define HR_BUFFER_SIZE     4     // Number of beats to average

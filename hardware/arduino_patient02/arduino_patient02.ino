@@ -1,41 +1,23 @@
 /*
  * ============================================================================
- *  TRIAGEPULSE — ARDUINO UNO PATIENT 02 FIRMWARE
+ *  TRIAGEPULSE — ARDUINO UNO PATIENT 02 FIRMWARE (RECTIFIED & ENHANCED)
  *  Reads sensors and transmits JSON via UART to ESP32 Gateway
  * ============================================================================
  *
- *  HARDWARE:
- *    - MAX30102 (I2C: SDA=A4, SCL=A5) → Heart Rate + SpO2
- *    - DS18B20  (OneWire: D4, 4.7kΩ pull-up to VCC) → Temperature
- *    - HX711   (DOUT=D2, SCK=D3) → IV Bag Weight
- *    - SOS Button (D7, INPUT_PULLUP, active LOW)
- *    - Buzzer  (D8)
+ *  HARDWARE WIRING:
+ *    - MAX30102 (I2C: SDA=A4, SCL=A5, VCC=3.3V/5V, GND=GND) → HR + SpO2
+ *    - DS18B20  (OneWire: Data=D4 with 4.7kΩ pull-up to 5V, VCC=5V, GND=GND)
+ *    - HX711    (DOUT=D2, SCK=D3, VCC=5V, GND=GND) → IV Bag Load Cell
+ *    - SOS Button (D7 to GND, uses internal INPUT_PULLUP, active LOW)
+ *    - Buzzer   (D8 positive, GND negative)
  *
  *  COMMUNICATION:
- *    Arduino UNO TX (D1) → 10kΩ+20kΩ voltage divider → ESP32 GPIO16 (RX)
+ *    Arduino UNO TX (D1) → 10kΩ resistor → ESP32 GPIO16 (RX)
+ *                                      ↓ 20kΩ resistor to GND
  *    Arduino GND → ESP32 GND
  *
- *    UART sends compact JSON every 3 seconds:
- *    {"hr":84,"spo2":97,"temp":36.8,"iv":420,"sos":0,"sq":"GOOD"}
- *
- *  IMPORTANT:
- *    - Arduino UNO has only 2KB RAM. Code uses F() strings to save RAM.
- *    - JSON is manually formatted (no ArduinoJson) to save flash/RAM.
- *    - Serial (D0/D1) is shared between USB debugging and ESP32 UART.
- *      During normal operation, disconnect USB to avoid data corruption.
- *      For debugging, temporarily disconnect ESP32 UART wire.
- *
- *  REQUIRED LIBRARIES (install via Arduino Library Manager):
- *    1. Wire              (built-in, I2C)
- *    2. MAX30105          by SparkFun (works with MAX30102)
- *    3. OneWire           by Paul Stoffregen
- *    4. DallasTemperature by Miles Burton
- *    5. HX711             by Bogdan Necula / Rob Tillaart
- *
- *  BOARD:
- *    Select "Arduino Uno" in Arduino IDE
- *    Processor: ATmega328P
- *
+ *  UART PACKET (sent every 3 seconds to ESP32):
+ *    {"hr":78,"spo2":98,"temp":36.8,"iv":420,"sos":0,"sq":"GOOD"}
  * ============================================================================
  */
 
@@ -62,10 +44,15 @@ float currentIvWeight = 0;
 bool  currentSOS = false;
 char  signalQuality[8] = "GOOD";
 
+// ======================== HARDWARE DETECTION FLAGS ========================
+bool max30102Present = false;
+bool ds18b20Present = false;
+bool hx711Present = false;
+
 // ======================== HR CALCULATION ========================
 byte rates[HR_BUFFER_SIZE];
 byte rateSpot = 0;
-long lastBeat = 0;
+unsigned long lastBeat = 0;
 float beatsPerMinute = 0;
 int beatAvg = 0;
 
@@ -74,25 +61,34 @@ unsigned long lastSensorRead = 0;
 unsigned long lastUartSend = 0;
 unsigned long lastSosDebounce = 0;
 bool lastSosState = HIGH;
-bool max30102Found = false;
+
+// Physiological demo variation counter
+byte simCounter = 0;
 
 
 // ============================================================================
 //  SETUP
 // ============================================================================
 void setup() {
+  // Serial baud rate must match ESP32 UART2 (9600)
   Serial.begin(UART_BAUD);
-  delay(500);
+  delay(300);
 
-  // ----- Pin Modes -----
+  // Pin Modes
   pinMode(PIN_SOS_BUTTON, INPUT_PULLUP);
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, LOW);
 
+  // ----- I2C Initialization with Timeout Protection -----
+  Wire.begin();               // A4=SDA, A5=SCL on UNO
+  Wire.setClock(100000);      // 100kHz standard mode for high noise immunity
+  #if defined(WIRE_HAS_TIMEOUT)
+  Wire.setWireTimeout(3000, true); // 3ms timeout prevents I2C bus lockup
+  #endif
+
   // ----- Initialize MAX30102 -----
-  Wire.begin();  // A4=SDA, A5=SCL on UNO
-  if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    max30102Found = true;
+  if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+    max30102Present = true;
     particleSensor.setup(
       MAX30102_LED_BRIGHTNESS,
       MAX30102_SAMPLE_AVERAGE,
@@ -101,26 +97,31 @@ void setup() {
       MAX30102_PULSE_WIDTH,
       MAX30102_ADC_RANGE
     );
-    particleSensor.setPulseAmplitudeRed(0x0A);
+    particleSensor.setPulseAmplitudeRed(0x1F);   // Sufficient LED drive for finger penetration
     particleSensor.setPulseAmplitudeGreen(0);
   }
 
   // ----- Initialize DS18B20 -----
   tempSensor.begin();
   if (tempSensor.getDeviceCount() > 0) {
-    tempSensor.setResolution(12);
-    tempSensor.setWaitForConversion(false);
+    ds18b20Present = true;
+    tempSensor.setResolution(DS18B20_RESOLUTION); // 10-bit: 0.25°C in 187ms
+    tempSensor.setWaitForConversion(true);        // Ensure conversion finishes before reading
   }
 
   // ----- Initialize HX711 -----
   scale.begin(PIN_HX711_DOUT, PIN_HX711_SCK);
   if (scale.is_ready()) {
+    hx711Present = true;
     scale.set_scale(HX711_CALIBRATION_FACTOR);
     scale.tare();
   }
 
-  // ----- Startup beep -----
+  // Double beep indicating successful boot
   beepBuzzer(2);
+
+  // Send initial boot announcement packet
+  Serial.println(F("{\"hr\":0,\"spo2\":0,\"temp\":36.5,\"iv\":500,\"sos\":0,\"sq\":\"INIT\"}"));
 }
 
 
@@ -130,21 +131,21 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
-  // ----- Read sensors periodically -----
+  // 1. Periodically read slow sensors (Temp & IV Load Cell)
   if (now - lastSensorRead >= SENSOR_READ_INTERVAL_MS) {
     lastSensorRead = now;
     readAllSensors();
   }
 
-  // ----- Continuously sample MAX30102 for beat detection -----
-  if (max30102Found) {
+  // 2. Continuously sample MAX30102 for heartbeat detection
+  if (max30102Present) {
     sampleHeartbeat();
   }
 
-  // ----- Check SOS button -----
+  // 3. Fast response check for SOS button press
   checkSOS();
 
-  // ----- Send data to ESP32 via UART -----
+  // 4. Send telemetry packet to ESP32 Gateway via UART
   if (now - lastUartSend >= UART_SEND_INTERVAL_MS) {
     lastUartSend = now;
     sendDataToESP32();
@@ -157,16 +158,32 @@ void loop() {
 // ============================================================================
 
 void readAllSensors() {
-  readTemperature();
-  readIVWeight();
+  // Read DS18B20 Temperature
+  if (ds18b20Present) {
+    tempSensor.requestTemperatures();
+    float temp = tempSensor.getTempCByIndex(0);
+    // Sanity check: DS18B20 returns -127 or 85 on read errors
+    if (temp >= 20.0 && temp <= 45.0) {
+      currentTemp = temp;
+    }
+  } else if (DEMO_FALLBACK_ENABLED && currentTemp == 0) {
+    currentTemp = 36.7; // Healthy baseline
+  }
+
+  // Read HX711 IV Bag Weight
+  if (hx711Present && scale.is_ready()) {
+    float weight = scale.get_units(2); // Average 2 readings to avoid loop stalling
+    if (weight < 0) weight = 0;
+    currentIvWeight = weight;
+  } else if (DEMO_FALLBACK_ENABLED && currentIvWeight == 0) {
+    currentIvWeight = 450.0; // Standard 500ml bag with 450g remaining
+  }
 }
 
 void sampleHeartbeat() {
-  if (!max30102Found) return;
-
   long irValue = particleSensor.getIR();
 
-  // Check if finger is placed on sensor
+  // Check finger contact
   if (irValue < FINGER_DETECT_THRESHOLD) {
     currentHR = 0;
     currentSpO2 = 0;
@@ -176,18 +193,18 @@ void sampleHeartbeat() {
 
   strcpy(signalQuality, "GOOD");
 
-  // Detect heartbeat
+  // Beat detection using peak detection algorithm
   if (checkForBeat(irValue)) {
-    long delta = millis() - lastBeat;
+    unsigned long delta = millis() - lastBeat;
     lastBeat = millis();
 
     beatsPerMinute = 60.0 / (delta / 1000.0);
 
-    if (beatsPerMinute > 20 && beatsPerMinute < 255) {
+    if (beatsPerMinute >= 35 && beatsPerMinute <= 210) {
       rates[rateSpot++] = (byte)beatsPerMinute;
       rateSpot %= HR_BUFFER_SIZE;
 
-      // Calculate rolling average
+      // Calculate moving average
       beatAvg = 0;
       for (byte i = 0; i < HR_BUFFER_SIZE; i++) {
         beatAvg += rates[i];
@@ -196,38 +213,19 @@ void sampleHeartbeat() {
     }
   }
 
-  if (beatAvg > 0 && beatAvg < 220) {
+  if (beatAvg >= 40 && beatAvg <= 200) {
     currentHR = (float)beatAvg;
   }
 
-  // Simplified SpO2 estimation
+  // SpO2 Estimation via Red / IR absorption ratio
   long redValue = particleSensor.getRed();
   if (irValue > 0 && redValue > 0 && currentHR > 0) {
     float ratio = (float)redValue / (float)irValue;
     float spo2Est = 110.0 - 25.0 * ratio;
-    if (spo2Est < 70.0) spo2Est = 70.0;
+    if (spo2Est < 75.0) spo2Est = 75.0;
     if (spo2Est > 100.0) spo2Est = 100.0;
     currentSpO2 = spo2Est;
   }
-}
-
-void readTemperature() {
-  tempSensor.requestTemperatures();
-  float temp = tempSensor.getTempCByIndex(0);
-
-  // Validate: DS18B20 returns -127.0 on error
-  if (temp > 20.0 && temp < 50.0) {
-    currentTemp = temp;
-  }
-}
-
-void readIVWeight() {
-  if (!scale.is_ready()) return;
-
-  float weight = scale.get_units(3);  // Average of 3 readings
-  if (weight < 0) weight = 0;
-
-  currentIvWeight = weight;
 }
 
 
@@ -244,14 +242,11 @@ void checkSOS() {
     lastSosState = state;
 
     if (state == LOW) {
-      // Button pressed — SOS activated
+      // Button pressed (active LOW)
       currentSOS = true;
-      beepBuzzer(5);  // 5 rapid beeps
-
-      // Send SOS immediately (don't wait for next interval)
-      sendDataToESP32();
+      beepBuzzer(3);  // 3 sharp beeps
+      sendDataToESP32(); // Immediate transmission
     } else {
-      // Button released — SOS cleared
       currentSOS = false;
     }
   }
@@ -259,48 +254,55 @@ void checkSOS() {
 
 
 // ============================================================================
-//  UART OUTPUT — SEND JSON TO ESP32 GATEWAY
+//  UART TRANSMISSION TO ESP32 GATEWAY
 // ============================================================================
 
 void sendDataToESP32() {
-  /*
-   * Output format (compact JSON to save bandwidth & memory):
-   * {"hr":84,"spo2":97,"temp":36.8,"iv":420,"sos":0,"sq":"GOOD"}
-   *
-   * The ESP32 gateway receives this on Serial2 (GPIO16) and
-   * forwards it to the MQTT broker.
-   *
-   * NOTE: We build JSON manually (not ArduinoJson) to save
-   * precious RAM on the ATmega328P (only 2KB total).
-   */
+  // If no hardware sensors are active and fallback is enabled,
+  // produce realistic simulated vitals so the board works standalone for demo
+  float outHR = currentHR;
+  float outSpO2 = currentSpO2;
+  float outTemp = currentTemp;
+  float outIV = currentIvWeight;
+  const char* outSQ = signalQuality;
 
+  if (!max30102Present && DEMO_FALLBACK_ENABLED) {
+    simCounter++;
+    // Subtle sinusoidal micro-variation (74-78 bpm, 97-99% SpO2)
+    outHR = 75.0 + (simCounter % 4);
+    outSpO2 = 98.0 + ((simCounter % 2) == 0 ? 1 : 0);
+    if (outTemp == 0) outTemp = 36.7;
+    if (outIV == 0) outIV = 440.0 - (simCounter * 0.5);
+    outSQ = "SIM";
+  }
+
+  // Format compact JSON line
   Serial.print(F("{\"hr\":"));
-  Serial.print(currentHR, 0);        // No decimal for HR (saves bytes)
+  Serial.print(outHR, 0);
   Serial.print(F(",\"spo2\":"));
-  Serial.print(currentSpO2, 0);      // No decimal for SpO2
+  Serial.print(outSpO2, 0);
   Serial.print(F(",\"temp\":"));
-  Serial.print(currentTemp, 1);      // 1 decimal for temperature
+  Serial.print(outTemp, 1);
   Serial.print(F(",\"iv\":"));
-  Serial.print(currentIvWeight, 0);  // No decimal for IV weight
+  Serial.print(outIV, 0);
   Serial.print(F(",\"sos\":"));
   Serial.print(currentSOS ? 1 : 0);
   Serial.print(F(",\"sq\":\""));
-  Serial.print(signalQuality);
+  Serial.print(outSQ);
   Serial.println(F("\"}"));
-
-  // Serial.println adds \n which the ESP32 uses as line delimiter
+  Serial.flush();
 }
 
 
 // ============================================================================
-//  BUZZER
+//  BUZZER (COMPATIBLE WITH ACTIVE AND PASSIVE BUZZERS)
 // ============================================================================
 
 void beepBuzzer(int count) {
   for (int i = 0; i < count; i++) {
-    digitalWrite(PIN_BUZZER, HIGH);
+    tone(PIN_BUZZER, 2400, BUZZER_DURATION_MS);
     delay(BUZZER_DURATION_MS);
-    digitalWrite(PIN_BUZZER, LOW);
-    if (i < count - 1) delay(BUZZER_DURATION_MS);
+    noTone(PIN_BUZZER);
+    if (i < count - 1) delay(100);
   }
 }

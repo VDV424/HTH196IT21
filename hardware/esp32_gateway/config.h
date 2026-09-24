@@ -9,18 +9,25 @@
 #define CONFIG_H
 
 // ======================== WIFI CONFIGURATION ========================
-#define WIFI_SSID          "TriagePulse_Net"      // Change to your WiFi SSID
-#define WIFI_PASSWORD      "triagepulse2026"      // Change to your WiFi password
+#define WIFI_SSID          "VARUN 9476"           // WiFi SSID
+#define WIFI_PASSWORD      "varun1234"            // WiFi password
 #define WIFI_RETRY_DELAY   500                    // ms between WiFi retries
 #define WIFI_MAX_RETRIES   40                     // Max WiFi connection attempts
 
 // ======================== MQTT CONFIGURATION ========================
-#define MQTT_BROKER        "192.168.1.100"        // Laptop IP running Mosquitto
+#define MQTT_BROKER        "10.10.53.125"         // Laptop IP on AIML network
 #define MQTT_PORT          1883
 #define MQTT_CLIENT_ID     "ESP32_GATEWAY"
 #define MQTT_USER          ""                     // Leave empty if no auth
 #define MQTT_PASS          ""
 #define MQTT_RETRY_DELAY   5000                   // ms between MQTT reconnects
+
+// ======================== HTTP REST DIRECT TELEMETRY ========================
+// Direct ingestion into FastAPI backend if MQTT broker is offline
+#define HTTP_TELEMETRY_ENABLED  true
+#define BACKEND_HTTP_PORT       8000
+#define BACKEND_HTTP_PATH       "/api/hardware/telemetry"
+#define DEMO_FALLBACK_ENABLED   true
 
 // ======================== PATIENT IDs ========================
 #define PATIENT_01_ID      "P01"
@@ -96,7 +103,7 @@
 #define MAX30102_ADC_RANGE        4096      // 2048, 4096, 8192, 16384
 
 // Finger detection threshold
-#define FINGER_DETECT_THRESHOLD   50000     // IR value below this = no finger
+#define FINGER_DETECT_THRESHOLD   30000     // IR value below this = no finger
 
 // ======================== SIGNAL QUALITY ========================
 // If data is older than this, mark as STALE
