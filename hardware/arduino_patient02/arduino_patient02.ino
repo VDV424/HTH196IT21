@@ -70,35 +70,37 @@ byte simCounter = 0;
 //  SETUP
 // ============================================================================
 void setup() {
-  // Serial baud rate must match ESP32 UART2 (9600)
+  // Serial baud rate must match ESP gateway (9600)
   Serial.begin(UART_BAUD);
-  delay(300);
+  delay(200);
+  Serial.println(F("{\"hr\":0,\"spo2\":0,\"temp\":36.5,\"iv\":500,\"sos\":0,\"sq\":\"INIT\"}"));
 
   // Pin Modes
   pinMode(PIN_SOS_BUTTON, INPUT_PULLUP);
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, LOW);
 
-  // ----- I2C Initialization with Timeout Protection -----
-  Wire.begin();               // A4=SDA, A5=SCL on UNO
-  Wire.setClock(100000);      // 100kHz standard mode for high noise immunity
-  #if defined(WIRE_HAS_TIMEOUT)
-  Wire.setWireTimeout(3000, true); // 3ms timeout prevents I2C bus lockup
-  #endif
+  // ----- I2C Initialization with Active Timeout Protection -----
+  Wire.begin();
+  Wire.setClock(100000);
+  Wire.setWireTimeout(25000, true); // 25ms hardware timeout, reset on timeout
 
-  // ----- Initialize MAX30102 -----
-  if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
-    max30102Present = true;
-    particleSensor.setup(
-      MAX30102_LED_BRIGHTNESS,
-      MAX30102_SAMPLE_AVERAGE,
-      MAX30102_LED_MODE,
-      MAX30102_SAMPLE_RATE,
-      MAX30102_PULSE_WIDTH,
-      MAX30102_ADC_RANGE
-    );
-    particleSensor.setPulseAmplitudeRed(0x1F);   // Sufficient LED drive for finger penetration
-    particleSensor.setPulseAmplitudeGreen(0);
+  // Probe I2C address 0x57 (MAX30102) before begin() to prevent bus lockup
+  Wire.beginTransmission(0x57);
+  if (Wire.endTransmission() == 0) {
+    if (particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+      max30102Present = true;
+      particleSensor.setup(
+        MAX30102_LED_BRIGHTNESS,
+        MAX30102_SAMPLE_AVERAGE,
+        MAX30102_LED_MODE,
+        MAX30102_SAMPLE_RATE,
+        MAX30102_PULSE_WIDTH,
+        MAX30102_ADC_RANGE
+      );
+      particleSensor.setPulseAmplitudeRed(0x1F);
+      particleSensor.setPulseAmplitudeGreen(0);
+    }
   }
 
   // ----- Initialize DS18B20 -----
