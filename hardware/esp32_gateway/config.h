@@ -9,8 +9,8 @@
 #define CONFIG_H
 
 // ======================== WIFI CONFIGURATION ========================
-#define WIFI_SSID          "VARUN 9476"           // WiFi SSID
-#define WIFI_PASSWORD      "varun1234"            // WiFi password
+#define WIFI_SSID          "abcd"                 // Hotspot SSID
+#define WIFI_PASSWORD      "12345678"             // Hotspot password
 #define WIFI_RETRY_DELAY   500                    // ms between WiFi retries
 #define WIFI_MAX_RETRIES   40                     // Max WiFi connection attempts
 
