@@ -3,6 +3,20 @@ import { Patient, Nurse, Alert, KPIs, AllocationExplanation, DoctorEscalationRec
 const API_BASE = '/api';
 
 export const api = {
+  // Auth
+  login: async (role: string, username: string, password?: string, isDemo: boolean = false) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, username, password, is_demo: isDemo })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Login failed');
+    }
+    return res.json();
+  },
+
   // Patients
   getPatients: async (): Promise<Patient[]> => {
     const res = await fetch(`${API_BASE}/patients`);

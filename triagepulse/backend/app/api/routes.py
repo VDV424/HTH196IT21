@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, HTTPException, Query, Body, Request
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import uuid
+from pydantic import BaseModel
 
 from ..models.schemas import (
     PatientSummary,
@@ -40,6 +41,46 @@ def set_app_state(sim: SimulationEngine, alerts: AlertEngine, alloc: NurseAlloca
     allocation_engine = alloc
     handover_service = ho
     mqtt_adapter = mqtt
+
+class LoginRequest(BaseModel):
+    role: str
+    username: str
+    password: Optional[str] = None
+    is_demo: bool = False
+
+@router.post("/auth/login")
+def login(req: LoginRequest, request: Request):
+    # 1. Enforce Admin Security Rule at the backend level
+    if req.role == "admin":
+        client_ip = request.client.host if request.client else "unknown"
+        # 127.0.0.1, ::1, or localhost
+        if client_ip not in ["127.0.0.1", "::1", "localhost"]:
+            raise HTTPException(status_code=403, detail="SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.")
+    
+    # 2. Authenticate exact login vs demo login
+    if not req.is_demo:
+        # Require password for exact login
+        if not req.password:
+            raise HTTPException(status_code=401, detail="Password required for secure login")
+        # In a real app, verify against SQLite/DB. Here we use a secure mock check for prototype.
+        if req.password != "admin123":
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # 3. Clear preset simulation data for exact login (ready for hardware)
+        if sim_engine:
+            sim_engine.demo_mode_active = False
+            sim_engine.is_running = False
+            sim_engine.patients.clear()
+            alert_engine.clear_alerts()
+            allocation_engine.allocations.clear()
+    else:
+        # Ensure simulation is running for demo
+        if sim_engine and not sim_engine.patients:
+            sim_engine.is_running = True
+            sim_engine.demo_mode_active = True
+            sim_engine._init_demo_patients()
+    
+    return {"status": "success", "user": req.username, "role": req.role}
 
 # ----------------- Patients -----------------
 @router.get("/patients", response_model=List[PatientSummary])

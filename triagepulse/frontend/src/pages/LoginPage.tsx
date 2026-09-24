@@ -20,6 +20,7 @@ import {
   Fingerprint,
   ChevronDown,
 } from 'lucide-react';
+import { api } from '../services/api';
 
 export type LoginRole = 'nurse' | 'doctor' | 'patient' | 'management' | 'admin';
 
@@ -109,41 +110,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isConnected }) =>
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Security Restriction: Admin login is only allowed on the physical server (localhost)
-    if (selectedRole === 'admin') {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (!isLocalhost) {
-        alert("SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.");
-        return;
-      }
-    }
-
     setIsLoggingIn(true);
-
-    // Simulate authentication delay for polish
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    onLogin(selectedRole, {
-      name: userName || config.defaultUser,
-      id: config.defaultId,
-    });
+    
+    try {
+      const username = userName || config.defaultUser;
+      // Exact login sends isDemo=false. This tells the backend to clear simulation data!
+      const res = await api.login(selectedRole, username, password, false);
+      
+      onLogin(selectedRole as LoginRole, {
+        name: res.user,
+        id: config.defaultId,
+      });
+    } catch (err: any) {
+      alert(err.message || 'Login failed.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleQuickLogin = async (role: LoginRole) => {
-    if (role === 'admin') {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (!isLocalhost) {
-        alert("SECURITY POLICY: System Administration access is restricted to the local server console only. Network access is denied.");
-        return;
-      }
-    }
-
-    const c = roleConfig[role];
     setSelectedRole(role);
     setIsLoggingIn(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    onLogin(role, { name: c.defaultUser, id: c.defaultId });
+    
+    try {
+      const c = roleConfig[role];
+      // Quick Demo access sends isDemo=true to keep simulation data
+      const res = await api.login(role, c.defaultUser, 'admin123', true);
+      
+      onLogin(role, { name: res.user, id: c.defaultId });
+    } catch (err: any) {
+      alert(err.message || 'Login failed.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
