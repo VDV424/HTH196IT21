@@ -1,30 +1,50 @@
 /*
  * ============================================================================
- *  TRIAGEPULSE — ESP32 GATEWAY FIRMWARE (RECTIFIED & ENHANCED)
- *  Patient 01 Direct Monitoring + Patient 02 Arduino UNO UART Gateway
- *  Dual Ingestion: MQTT + Direct FastAPI HTTP Telemetry Fallback
+ *  TRIAGEPULSE — GATEWAY FIRMWARE (ESP8266 & ESP32 DUAL-COMPATIBLE)
+ *  Patient 01 Direct Monitoring + Patient 02 Arduino UNO Gateway
+ *  Dual Ingestion: MQTT + Direct FastAPI HTTP REST Telemetry
  * ============================================================================
  *
- *  HARDWARE WIRING (Patient 01 on this ESP32):
+ *  HARDWARE WIRING:
+ *  ----------------------------------------------------------------------------
+ *  [ESP8266 / NodeMCU]:
+ *    - MAX30102 (I2C: SDA=D2/GPIO4, SCL=D1/GPIO5, 3.3V, GND) → HR + SpO2
+ *    - DS18B20  (OneWire: D5/GPIO14 with 4.7kΩ pull-up to 3.3V, 3.3V, GND) → Temp
+ *    - HX711    (DOUT=D6/GPIO12, SCK=D0/GPIO16, 3.3V, GND) → IV Bag Load Cell
+ *    - SOS Button (D3/GPIO0 or Built-in FLASH button, active LOW)
+ *    - Buzzer   (D8/GPIO15 positive, GND negative)
+ *    - Patient 02 RX: D7/GPIO13 (SoftwareSerial RX from Arduino UNO TX D1)
+ *
+ *  [ESP32 DevKit]:
  *    - MAX30102 (I2C: SDA=GPIO21, SCL=GPIO22, 3.3V, GND) → HR + SpO2
  *    - DS18B20  (OneWire: GPIO4 with 4.7kΩ pull-up to 3.3V, 3.3V, GND) → Temp
- *    - HX711    (DOUT=GPIO18, SCK=GPIO19, 5V/3.3V, GND) → IV Bag Load Cell
- *    - SOS Button (GPIO27 to GND, INPUT_PULLUP, active LOW)
- *    - Buzzer   (GPIO15 positive, GND negative)
- *
- *  UART2 RECEIVER (Patient 02 from Arduino UNO):
- *    - ESP32 GPIO16 (RX2) ← 10kΩ/20kΩ divider from Arduino TX (D1)
- *    - Arduino GND ─── ESP32 GND
+ *    - HX711    (DOUT=GPIO18, SCK=GPIO19, 3.3V, GND) → IV Bag Load Cell
+ *    - SOS Button (GPIO27, active LOW)
+ *    - Buzzer   (GPIO15)
+ *    - Patient 02 RX: GPIO16 (Hardware UART2 RX from Arduino UNO TX D1)
  *
  *  COMMUNICATION PIPELINE:
  *    Primary:   MQTT Broker (Port 1883)
- *    Fallback:  Direct FastAPI REST Endpoint (POST http://<laptop>:8000/api/hardware/telemetry)
+ *    Fallback:  Direct FastAPI REST Endpoint (POST http://<gateway_ip>:8000/api/hardware/telemetry)
  * ============================================================================
  */
 
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <HTTPClient.h>
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>
+  #include <WiFiClient.h>
+  #include <ESP8266HTTPClient.h>
+  #include <SoftwareSerial.h>
+#elif defined(ESP32)
+  #include <WiFi.h>
+  #include <WiFiClient.h>
+  #include <HTTPClient.h>
+#else
+  #include <ESP8266WiFi.h>
+  #include <WiFiClient.h>
+  #include <ESP8266HTTPClient.h>
+  #include <SoftwareSerial.h>
+#endif
+
 #include <PubSubClient.h>
 #include <Wire.h>
 #include "MAX30105.h"
@@ -41,6 +61,11 @@ MAX30105 particleSensor;
 OneWire oneWire(PIN_DS18B20);
 DallasTemperature tempSensor(&oneWire);
 HX711 scale;
+
+#if defined(ESP8266)
+SoftwareSerial unoSerial(PIN_SWSERIAL_RX, PIN_SWSERIAL_TX);
+#endif
+
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
@@ -82,8 +107,8 @@ int beatAvg = 0;
 float lastIvWeight = -1.0;
 unsigned long lastIvReadTime = 0;
 
-// ======================== UART2 RECEIVE BUFFER ========================
-String uart2Buffer = "";
+// ======================== SERIAL RECEIVE BUFFER ========================
+String rxBuffer = "";
 
 // ======================== TIMING ========================
 unsigned long lastSensorReadTime = 0;
@@ -101,12 +126,13 @@ void readMAX30102();
 void readDS18B20();
 void readHX711();
 void checkSOSButton();
-void receiveUART2();
+void receivePatient02Data();
 void parseAndForwardP02(String &jsonStr);
 void publishPatient01();
 void publishDeviceStatus();
 void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp, float ivWeight, bool sos, const String& sq, const String& ivState, float ivFlow);
 void beepBuzzer(int count);
+String getBackendHost();
 
 
 // ============================================================================
@@ -114,11 +140,16 @@ void beepBuzzer(int count);
 // ============================================================================
 void setup() {
   Serial.begin(115200);
-  delay(500);
-  Serial.println(F("\n===================================="));
+  delay(300);
+  Serial.println();
+  Serial.println(F("========================================"));
+#if defined(ESP8266)
+  Serial.println(F("  TRIAGEPULSE ESP8266 GATEWAY v2.0"));
+#else
   Serial.println(F("  TRIAGEPULSE ESP32 GATEWAY v2.0"));
-  Serial.println(F("  Patient 01 + Patient 02 Gateway"));
-  Serial.println(F("====================================\n"));
+#endif
+  Serial.println(F("  Patient 01 + Patient 02 (Uno) Gateway"));
+  Serial.println(F("========================================\n"));
 
   bootTime = millis();
 
@@ -127,7 +158,16 @@ void setup() {
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, LOW);
 
-  // I2C for MAX30102
+  // Initialize Patient 02 Serial Receiver
+#if defined(ESP8266)
+  unoSerial.begin(SWSERIAL_BAUD);
+  Serial.printf("[SoftwareSerial] Listening for Patient 02 on D7 (GPIO%d) at %d baud\n", PIN_SWSERIAL_RX, SWSERIAL_BAUD);
+#else
+  Serial2.begin(UART2_BAUD, SERIAL_8N1, PIN_UART2_RX, PIN_UART2_TX);
+  Serial.println(F("[UART2] Listening for Patient 02 on GPIO16 at 9600 baud"));
+#endif
+
+  // Initialize I2C for MAX30102
   Wire.begin(PIN_MAX30102_SDA, PIN_MAX30102_SCL);
   Wire.setClock(100000); // 100kHz standard mode
 
@@ -155,7 +195,7 @@ void setup() {
   tempSensor.begin();
   if (tempSensor.getDeviceCount() > 0) {
     ds18b20Present = true;
-    tempSensor.setResolution(10); // 10-bit: 0.25°C in 187ms
+    tempSensor.setResolution(10); // 10-bit: 0.25°C in ~187ms
     tempSensor.setWaitForConversion(true);
     Serial.println(F("OK"));
   } else {
@@ -174,10 +214,6 @@ void setup() {
     Serial.println(F("NOT DETECTED (Using Demo Fallback if enabled)"));
   }
 
-  // Initialize UART2 for Arduino UNO (Patient 02)
-  Serial2.begin(UART2_BAUD, SERIAL_8N1, PIN_UART2_RX, PIN_UART2_TX);
-  Serial.println(F("[UART2] Listening for Patient 02 on GPIO16 at 9600 baud"));
-
   // Connect WiFi
   connectWiFi();
 
@@ -188,7 +224,7 @@ void setup() {
 
   // Startup beep
   beepBuzzer(2);
-  Serial.println(F("\n[READY] TriagePulse ESP32 Gateway operational.\n"));
+  Serial.println(F("\n[READY] TriagePulse Gateway operational.\n"));
 }
 
 
@@ -196,6 +232,10 @@ void setup() {
 //  MAIN LOOP
 // ============================================================================
 void loop() {
+#if defined(ESP8266)
+  yield(); // Prevent ESP8266 Software Watchdog Timer reset
+#endif
+
   // Maintain WiFi
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
@@ -222,8 +262,8 @@ void loop() {
   // Check SOS Button
   checkSOSButton();
 
-  // Receive Patient 02 data via UART
-  receiveUART2();
+  // Receive Patient 02 data from Arduino UNO
+  receivePatient02Data();
 
   // Publish / Dispatch Telemetry
   if (now - lastMqttPublishTime >= MQTT_PUBLISH_INTERVAL_MS) {
@@ -244,10 +284,14 @@ void loop() {
 // ============================================================================
 
 void readMAX30102() {
+#if defined(ESP8266)
+  yield();
+#endif
+
   if (!max30102Present) {
     if (DEMO_FALLBACK_ENABLED) {
       simCounter++;
-      patient01.heartRate = 74.0 + (simCounter % 3);
+      patient01.heartRate = 74.0 + (simCounter % 4);
       patient01.spo2 = 98.0 + ((simCounter % 2) == 0 ? 1 : 0);
       patient01.signalQuality = "SIM";
       patient01.lastVitalsTime = millis();
@@ -300,6 +344,10 @@ void readMAX30102() {
 }
 
 void readDS18B20() {
+#if defined(ESP8266)
+  yield();
+#endif
+
   if (ds18b20Present) {
     tempSensor.requestTemperatures();
     float temp = tempSensor.getTempCByIndex(0);
@@ -312,6 +360,10 @@ void readDS18B20() {
 }
 
 void readHX711() {
+#if defined(ESP8266)
+  yield();
+#endif
+
   float weight = 0;
   if (hx711Present && scale.is_ready()) {
     weight = scale.get_units(2);
@@ -373,25 +425,44 @@ void checkSOSButton() {
 
 
 // ============================================================================
-//  UART2 — RECEIVE PATIENT 02 DATA FROM ARDUINO UNO
+//  RECEIVE PATIENT 02 DATA FROM ARDUINO UNO
 // ============================================================================
 
-void receiveUART2() {
-  while (Serial2.available()) {
-    char c = Serial2.read();
+void receivePatient02Data() {
+#if defined(ESP8266)
+  yield();
+  while (unoSerial.available()) {
+    char c = unoSerial.read();
     if (c == '\n') {
-      uart2Buffer.trim();
-      if (uart2Buffer.length() > 5) {
-        parseAndForwardP02(uart2Buffer);
+      rxBuffer.trim();
+      if (rxBuffer.length() > 5) {
+        parseAndForwardP02(rxBuffer);
       }
-      uart2Buffer = "";
+      rxBuffer = "";
     } else if (c != '\r') {
-      uart2Buffer += c;
-      if (uart2Buffer.length() > 300) {
-        uart2Buffer = "";
+      rxBuffer += c;
+      if (rxBuffer.length() > 300) {
+        rxBuffer = "";
       }
     }
   }
+#else
+  while (Serial2.available()) {
+    char c = Serial2.read();
+    if (c == '\n') {
+      rxBuffer.trim();
+      if (rxBuffer.length() > 5) {
+        parseAndForwardP02(rxBuffer);
+      }
+      rxBuffer = "";
+    } else if (c != '\r') {
+      rxBuffer += c;
+      if (rxBuffer.length() > 300) {
+        rxBuffer = "";
+      }
+    }
+  }
+#endif
 }
 
 void parseAndForwardP02(String &jsonStr) {
@@ -399,7 +470,7 @@ void parseAndForwardP02(String &jsonStr) {
   DeserializationError err = deserializeJson(doc, jsonStr);
 
   if (err) {
-    Serial.print(F("[UART2] JSON parse error: "));
+    Serial.print(F("[Uno-UART] JSON parse error: "));
     Serial.println(err.f_str());
     return;
   }
@@ -411,7 +482,7 @@ void parseAndForwardP02(String &jsonStr) {
   bool  sos  = doc["sos"]  | false;
   const char* sq = doc["sq"] | "GOOD";
 
-  Serial.printf("[UART2] P02: HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
+  Serial.printf("[Uno-UART] P02: HR=%.0f SpO2=%.0f T=%.1f IV=%.0fg SOS=%d SQ=%s\n",
                 hr, spo2, temp, iv, sos, sq);
 
   float remaining = iv - IV_BAG_TARE_WEIGHT_G;
@@ -495,13 +566,18 @@ void publishPatient01() {
                 patient01.ivWeightGrams, patient01.sosActive, patient01.signalQuality.c_str());
 }
 
-void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp, float ivWeight, bool sos, const String& sq, const String& ivState, float ivFlow) {
-  HTTPClient http;
-  String url = String("http://") + MQTT_BROKER + ":" + String(BACKEND_HTTP_PORT) + BACKEND_HTTP_PATH;
+String getBackendHost() {
+  // If connected to Hotspot, gateway IP is usually the host PC (192.168.137.1)
+  IPAddress gw = WiFi.gatewayIP();
+  if (gw != IPAddress(0, 0, 0, 0)) {
+    return gw.toString();
+  }
+  return String(MQTT_BROKER);
+}
 
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-  http.setTimeout(1200); // 1.2s timeout so loop never hangs
+void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp, float ivWeight, bool sos, const String& sq, const String& ivState, float ivFlow) {
+  String host = getBackendHost();
+  String url = String("http://") + host + ":" + String(BACKEND_HTTP_PORT) + BACKEND_HTTP_PATH;
 
   StaticJsonDocument<300> doc;
   doc["patient_id"] = patientId;
@@ -518,13 +594,22 @@ void sendHttpTelemetry(const String& patientId, float hr, float spo2, float temp
   String jsonPayload;
   serializeJson(doc, jsonPayload);
 
+#if defined(ESP8266)
+  WiFiClient client;
+  HTTPClient http;
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(1200); // 1.2s timeout so loop never hangs
   int httpCode = http.POST(jsonPayload);
-  if (httpCode > 0) {
-    // Successfully ingested into FastAPI backend
-  } else {
-    // If connection refused, quiet fail
-  }
   http.end();
+#else
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(1200); // 1.2s timeout so loop never hangs
+  int httpCode = http.POST(jsonPayload);
+  http.end();
+#endif
 }
 
 void publishDeviceStatus() {
@@ -559,10 +644,13 @@ void connectWiFi() {
     delay(WIFI_RETRY_DELAY);
     Serial.print(".");
     retries++;
+#if defined(ESP8266)
+    yield();
+#endif
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf(" CONNECTED!\n");
+    Serial.println(F(" CONNECTED!"));
     Serial.printf("[WiFi] IP: %s  RSSI: %ddBm  Gateway: %s\n",
                   WiFi.localIP().toString().c_str(), WiFi.RSSI(),
                   WiFi.gatewayIP().toString().c_str());
@@ -575,7 +663,9 @@ void connectWiFi() {
 void connectMQTT() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  Serial.printf("[MQTT] Connecting to %s:%d... ", MQTT_BROKER, MQTT_PORT);
+  String broker = getBackendHost();
+  Serial.printf("[MQTT] Connecting to %s:%d... ", broker.c_str(), MQTT_PORT);
+  mqttClient.setServer(broker.c_str(), MQTT_PORT);
 
   bool connected = false;
   if (strlen(MQTT_USER) > 0) {
@@ -603,5 +693,8 @@ void beepBuzzer(int count) {
     delay(BUZZER_DURATION_MS);
     noTone(PIN_BUZZER);
     if (i < count - 1) delay(100);
+#if defined(ESP8266)
+    yield();
+#endif
   }
 }

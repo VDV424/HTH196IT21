@@ -1,7 +1,7 @@
 /*
  * ============================================================================
- *  TRIAGEPULSE — ESP32 GATEWAY CONFIG
- *  Configuration file for WiFi, MQTT, pins, and calibration constants
+ *  TRIAGEPULSE — GATEWAY CONFIG (ESP8266 & ESP32 DUAL-COMPATIBLE)
+ *  Configuration file for WiFi Hotspot, MQTT, REST Telemetry, Pins & Calibration
  * ============================================================================
  */
 
@@ -15,9 +15,10 @@
 #define WIFI_MAX_RETRIES   40                     // Max WiFi connection attempts
 
 // ======================== MQTT CONFIGURATION ========================
-#define MQTT_BROKER        "10.10.53.125"         // Laptop IP on AIML network
+// Host PC IP (Laptop Hotspot is usually 192.168.137.1 or LAN 10.10.53.125)
+#define MQTT_BROKER        "192.168.137.1"        
 #define MQTT_PORT          1883
-#define MQTT_CLIENT_ID     "ESP32_GATEWAY"
+#define MQTT_CLIENT_ID     "TRIAGE_GATEWAY"
 #define MQTT_USER          ""                     // Leave empty if no auth
 #define MQTT_PASS          ""
 #define MQTT_RETRY_DELAY   5000                   // ms between MQTT reconnects
@@ -32,11 +33,11 @@
 // ======================== PATIENT IDs ========================
 #define PATIENT_01_ID      "P01"
 #define PATIENT_02_ID      "P02"
-#define DEVICE_01_ID       "ESP32-P01"
+#define DEVICE_01_ID       "GATEWAY-P01"
 #define DEVICE_02_ID       "UNO-P02"
 
 // ======================== MQTT TOPICS ========================
-// Patient 01 (local ESP32 sensors)
+// Patient 01 (local sensors)
 #define TOPIC_P01_VITALS   "triagepulse/patient/P01/vitals"
 #define TOPIC_P01_IV       "triagepulse/patient/P01/iv"
 #define TOPIC_P01_SOS      "triagepulse/patient/P01/sos"
@@ -48,35 +49,59 @@
 #define TOPIC_P02_SOS      "triagepulse/patient/P02/sos"
 #define TOPIC_P02_STATUS   "triagepulse/patient/P02/status"
 
-// ======================== ESP32 PIN ASSIGNMENTS (Patient 01) ========================
-// MAX30102 Pulse Oximeter (I2C)
-#define PIN_MAX30102_SDA   21   // ESP32 GPIO21
-#define PIN_MAX30102_SCL   22   // ESP32 GPIO22
+// ======================== PIN ASSIGNMENTS ========================
+#if defined(ESP8266)
+  // --- ESP8266 / NODEMCU PINOUT ---
+  // MAX30102 Pulse Oximeter (I2C)
+  #define PIN_MAX30102_SDA   4    // NodeMCU D2 (GPIO4)
+  #define PIN_MAX30102_SCL   5    // NodeMCU D1 (GPIO5)
 
-// DS18B20 Temperature Sensor (OneWire)
-#define PIN_DS18B20        4    // ESP32 GPIO4 (4.7kΩ pull-up to 3.3V)
+  // DS18B20 Temperature Sensor (OneWire)
+  #define PIN_DS18B20        14   // NodeMCU D5 (GPIO14) — 4.7kΩ pull-up to 3.3V
 
-// HX711 Load Cell Amplifier (IV Weight)
-#define PIN_HX711_DOUT     18   // ESP32 GPIO18
-#define PIN_HX711_SCK      19   // ESP32 GPIO19
+  // HX711 Load Cell Amplifier (IV Weight)
+  #define PIN_HX711_DOUT     12   // NodeMCU D6 (GPIO12)
+  #define PIN_HX711_SCK      16   // NodeMCU D0 (GPIO16)
 
-// SOS Push Button
-#define PIN_SOS_BUTTON     27   // ESP32 GPIO27 (INPUT_PULLUP, active LOW)
+  // SOS Push Button (GPIO0 is wired to physical FLASH button on NodeMCU!)
+  #define PIN_SOS_BUTTON     0    // NodeMCU D3 (GPIO0) — active LOW with internal pullup
 
-// Buzzer
-#define PIN_BUZZER         15   // ESP32 GPIO15
+  // Buzzer
+  #define PIN_BUZZER         15   // NodeMCU D8 (GPIO15)
 
-// ======================== UART FOR PATIENT 02 (Arduino UNO) ========================
-// ESP32 Serial2 — receives data from Arduino UNO via voltage divider
-#define PIN_UART2_RX       16   // ESP32 GPIO16 (RX from Arduino TX via 10kΩ+20kΩ divider)
-#define PIN_UART2_TX       17   // ESP32 GPIO17 (TX to Arduino RX — optional)
-#define UART2_BAUD         9600
+  // SoftwareSerial for Patient 02 (Arduino UNO)
+  #define PIN_SWSERIAL_RX    13   // NodeMCU D7 (GPIO13) — RX from Arduino TX
+  #define PIN_SWSERIAL_TX    2    // NodeMCU D4 (GPIO2)  — TX to Arduino RX
+  #define SWSERIAL_BAUD      9600
+
+#else
+  // --- ESP32 DEVKIT PINOUT ---
+  // MAX30102 Pulse Oximeter (I2C)
+  #define PIN_MAX30102_SDA   21   // ESP32 GPIO21
+  #define PIN_MAX30102_SCL   22   // ESP32 GPIO22
+
+  // DS18B20 Temperature Sensor (OneWire)
+  #define PIN_DS18B20        4    // ESP32 GPIO4 (4.7kΩ pull-up to 3.3V)
+
+  // HX711 Load Cell Amplifier (IV Weight)
+  #define PIN_HX711_DOUT     18   // ESP32 GPIO18
+  #define PIN_HX711_SCK      19   // ESP32 GPIO19
+
+  // SOS Push Button
+  #define PIN_SOS_BUTTON     27   // ESP32 GPIO27 (INPUT_PULLUP, active LOW)
+
+  // Buzzer
+  #define PIN_BUZZER         15   // ESP32 GPIO15
+
+  // Hardware UART2 for Patient 02 (Arduino UNO)
+  #define PIN_UART2_RX       16   // ESP32 GPIO16 (RX from Arduino TX via divider)
+  #define PIN_UART2_TX       17   // ESP32 GPIO17 (TX to Arduino RX)
+  #define UART2_BAUD         9600
+#endif
 
 // ======================== HX711 CALIBRATION ========================
-// These values MUST be calibrated with your specific load cell!
-// Place a known weight (e.g., 500g) and adjust until reading matches.
-#define HX711_CALIBRATION_FACTOR  -420.0f   // Adjust during calibration
-#define HX711_TARE_OFFSET         0         // Set after tare
+#define HX711_CALIBRATION_FACTOR  -420.0f
+#define HX711_TARE_OFFSET         0
 
 // IV Bag Constants
 #define IV_BAG_TARE_WEIGHT_G      25.0f     // Empty bag weight in grams
@@ -106,7 +131,6 @@
 #define FINGER_DETECT_THRESHOLD   30000     // IR value below this = no finger
 
 // ======================== SIGNAL QUALITY ========================
-// If data is older than this, mark as STALE
 #define SIGNAL_STALE_TIMEOUT_MS   10000
 
 #endif // CONFIG_H
