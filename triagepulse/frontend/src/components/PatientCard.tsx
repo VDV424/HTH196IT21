@@ -88,8 +88,8 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onSelect }) =
               )}
 
               {p.data_source === 'PHYSICAL_DEVICE' && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 text-[9px] shadow-sm">
-                  <Radio className="w-2.5 h-2.5" /> ESP32
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold shadow-sm animate-pulse">
+                  <Radio className="w-3 h-3 text-emerald-600" /> {p.device_id || 'IoT Gateway'}
                 </span>
               )}
               {p.sos_active && (

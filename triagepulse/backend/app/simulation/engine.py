@@ -428,6 +428,11 @@ class SimulationEngine:
             self._apply_demo_script(elapsed)
 
         for pid, patient in self.patients.items():
+            # If patient is connected to a PHYSICAL_DEVICE (IoT hardware), do NOT overwrite with random simulation!
+            if patient.data_source == DataSource.PHYSICAL_DEVICE:
+                self._update_patient_trajectory_and_alerts(patient)
+                continue
+
             scenario = patient.scenario
             v = patient.current_vitals
             iv = patient.current_iv
@@ -565,6 +570,8 @@ class SimulationEngine:
         name = scenario_name.upper()
         if "NORMAL" in name:
             for p in self.patients.values():
+                if p.data_source == DataSource.PHYSICAL_DEVICE:
+                    continue
                 p.scenario = "STABLE"
                 p.current_iv.iv_remaining_ml = 500.0
                 p.current_iv.iv_state = "NORMAL"

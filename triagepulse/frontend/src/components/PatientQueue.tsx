@@ -88,9 +88,9 @@ export const PatientQueue: React.FC<PatientQueueProps> = ({ patients, onSelectPa
                       <div className="font-sans font-bold text-sm text-slate-900">{p.patient_id}</div>
                       <span className="text-[10px] text-slate-500 font-sans">({p.room})</span>
                       {isPhysical && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-500/20 text-blue-300 border border-emerald-500/30 text-[9px] font-sans">
-                          <Radio className="w-2.5 h-2.5" />
-                          ESP32
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-bold">
+                          <Radio className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
+                          {p.device_id || 'IoT Gateway'}
                         </span>
                       )}
                     </div>
