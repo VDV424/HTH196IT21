@@ -31,6 +31,7 @@ interface NavbarProps {
   setCurrentRole: (role: string) => void;
   isConnected: boolean;
   demoMode: boolean;
+  liveMode: boolean;
   lastUpdate?: string;
   activeAlertCount: number;
   pendingEscalationsCount?: number;
@@ -50,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setCurrentRole,
   isConnected,
   demoMode,
+  liveMode,
   lastUpdate,
   activeAlertCount,
   pendingEscalationsCount = 0,
@@ -165,6 +167,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-slate-600 font-mono text-[11px]">{isConnected ? 'LIVE WS' : 'RECONNECTING'}</span>
             </div>
 
+            {/* DEMO / LIVE Mode Indicator */}
+            {liveMode ? (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-bold shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                LIVE IoT
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                DEMO MODE
+              </div>
+            )}
             {/* MQTT Badge */}
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
               <Radio className="w-3.5 h-3.5 text-teal-600" />

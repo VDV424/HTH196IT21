@@ -334,13 +334,21 @@ def login(req: LoginRequest, request: Request):
         sim_engine.demo_mode_active = True
         sim_engine._init_demo_patients()
 
+    # Set LIVE vs DEMO mode based on login type:
+    # Quick-login (is_demo=True) → demo mode: all patients get simulated random data
+    # Form login (is_demo=False) → live mode: hardware patients show only real IoT data
+    if sim_engine:
+        sim_engine.live_mode = not req.is_demo
+
     return {
         "status": "success",
         "user": user_record.name,
         "username": user_record.username,
         "role": user_record.role,
         "id": user_record.default_id,
-        "message": f"Welcome, {user_record.name}!"
+        "is_demo": req.is_demo,
+        "live_mode": not req.is_demo,
+        "message": f"Welcome, {user_record.name}!" + (" [LIVE MODE — Real IoT Hardware Data]" if not req.is_demo else " [DEMO MODE — Simulated Data]")
     }
 
 # ----------------- Admin User Management & Approvals -----------------

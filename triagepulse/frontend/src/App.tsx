@@ -249,6 +249,7 @@ export const App: React.FC = () => {
         }}
         isConnected={isConnected}
         demoMode={simulationStatus.demo_mode}
+        liveMode={simulationStatus.live_mode}
         activeAlertCount={alerts.length}
         pendingEscalationsCount={0}
         sosActiveCount={sosCount}

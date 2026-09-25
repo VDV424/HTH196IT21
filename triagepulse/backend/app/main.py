@@ -52,7 +52,8 @@ async def periodic_broadcast():
                         "is_running": sim_engine.is_running,
                         "speed": sim_engine.speed_multiplier,
                         "demo_mode": sim_engine.demo_mode_active,
-                        "demo_step": sim_engine.demo_script_step
+                        "demo_step": sim_engine.demo_script_step,
+                        "live_mode": sim_engine.live_mode
                     }
                 }
                 await ws_manager.broadcast(payload)
@@ -107,6 +108,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "is_running": sim_engine.is_running,
                 "speed": sim_engine.speed_multiplier,
                 "demo_mode": sim_engine.demo_mode_active,
+                "live_mode": sim_engine.live_mode,
             }
         }
         await websocket.send_json(initial_msg)

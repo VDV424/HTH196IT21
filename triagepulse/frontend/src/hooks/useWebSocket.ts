@@ -13,6 +13,7 @@ interface WSState {
     speed: number;
     demo_mode: boolean;
     demo_step?: number;
+    live_mode: boolean;
   };
 }
 
@@ -24,7 +25,7 @@ export function useWebSocket() {
     kpis: null,
     explanations: [],
     isConnected: false,
-    simulationStatus: { is_running: true, speed: 1, demo_mode: false }
+    simulationStatus: { is_running: true, speed: 1, demo_mode: false, live_mode: false }
   });
 
   const wsRef = useRef<WebSocket | null>(null);

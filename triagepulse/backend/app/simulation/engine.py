@@ -45,6 +45,9 @@ class SimulationEngine:
         self.demo_mode_active = False
         self.demo_script_step = 0
         self.demo_start_time: Optional[float] = None
+        # LIVE MODE: When True, physical device patients (P01, P02) show ONLY real hardware data.
+        # When False (demo), ALL patients including P01/P02 get simulated random data.
+        self.live_mode: bool = False
         self.settings: Dict[str, float] = {
             "weight_trend_severity": 0.30,
             "weight_rate_of_change": 0.20,
@@ -428,8 +431,9 @@ class SimulationEngine:
             self._apply_demo_script(elapsed)
 
         for pid, patient in self.patients.items():
-            # If patient is connected to a PHYSICAL_DEVICE (IoT hardware), do NOT overwrite with random simulation!
-            if patient.data_source == DataSource.PHYSICAL_DEVICE:
+            # LIVE MODE: Physical device patients show ONLY real hardware data (no random noise).
+            # DEMO MODE: All patients (including P01/P02) get simulated random data for demonstration.
+            if self.live_mode and patient.data_source == DataSource.PHYSICAL_DEVICE:
                 self._update_patient_trajectory_and_alerts(patient)
                 continue
 
@@ -570,7 +574,7 @@ class SimulationEngine:
         name = scenario_name.upper()
         if "NORMAL" in name:
             for p in self.patients.values():
-                if p.data_source == DataSource.PHYSICAL_DEVICE:
+                if self.live_mode and p.data_source == DataSource.PHYSICAL_DEVICE:
                     continue
                 p.scenario = "STABLE"
                 p.current_iv.iv_remaining_ml = 500.0
